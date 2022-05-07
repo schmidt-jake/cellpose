@@ -1,8 +1,11 @@
-import pytest
-import os, sys, shutil
-from cellpose import utils
-
+import os
+import shutil
+import sys
 from pathlib import Path
+
+import pytest
+
+from cellpose import utils
 
 
 @pytest.fixture()

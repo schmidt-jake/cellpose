@@ -1,14 +1,17 @@
-import sys, os, argparse
-from tifffile import imread, imsave
+import argparse
+import os
+import sys
+from glob import glob
+
 import numpy as np
 from matplotlib import pyplot as plt
-from glob import glob
-from cellpose import models
+from natsort import natsorted
+from tifffile import imread, imsave
+from tqdm import tqdm, trange
+
+from cellpose import metrics, models
 from cellpose.io import logger_setup
 from cellpose.transforms import normalize_img
-from cellpose import metrics
-from tqdm import tqdm, trange
-from natsort import natsorted
 
 ### FUNCTIONS FOR USING ALL DATASETS TOGETHER -------------- ###
 

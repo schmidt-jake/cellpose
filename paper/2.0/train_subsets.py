@@ -1,11 +1,14 @@
-import sys, os, argparse
-from tifffile import imread, imsave
-import numpy as np
+import argparse
+import os
+import sys
 from glob import glob
-from cellpose import models
-from cellpose.io import logger_setup
-from cellpose import metrics
+
+import numpy as np
 from datasets import *
+from tifffile import imread, imsave
+
+from cellpose import metrics, models
+from cellpose.io import logger_setup
 
 
 def train_model(

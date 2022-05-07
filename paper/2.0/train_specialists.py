@@ -1,13 +1,17 @@
-import sys, os, argparse, time
-import numpy as np
+import argparse
+import os
+import sys
+import time
 from glob import glob
+
+import numpy as np
 import torch
-from torch import nn
-from tqdm import trange, tqdm
-from cellpose import models
-from cellpose.io import logger_setup, imread, imsave
-from cellpose import metrics, transforms, utils, resnet_torch
 from datasets import reshape_and_normalize
+from torch import nn
+from tqdm import tqdm, trange
+
+from cellpose import metrics, models, resnet_torch, transforms, utils
+from cellpose.io import imread, imsave, logger_setup
 
 
 def get_styles(
