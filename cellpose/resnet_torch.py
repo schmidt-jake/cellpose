@@ -3,6 +3,8 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.modules.container import Sequential
+from torch.nn.parameter import Parameter
 
 sz = 3
 
@@ -31,7 +33,7 @@ def batchconv0(in_channels: int, out_channels: int, sz: int) -> nn.Sequential:
 
 
 class resdown(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, sz: int):
+    def __init__(self, in_channels: int, out_channels: int, sz: int) -> None:
         super().__init__()
         self.conv = nn.Sequential()
         self.proj = batchconv0(in_channels, out_channels, 1)
@@ -72,7 +74,7 @@ class convdown(nn.Module):
 
 
 class downsample(nn.Module):
-    def __init__(self, nbase: List[int], sz: int, residual_on: bool = True):
+    def __init__(self, nbase: List[int], sz: int, residual_on: bool = True) -> None:
         super().__init__()
         self.down = nn.Sequential()
         self.maxpool = nn.MaxPool2d(2, 2)
@@ -105,7 +107,7 @@ class batchconvstyle(nn.Module):
         style_channels: int,
         sz: int,
         concatenation: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.concatenation = concatenation
         if concatenation:
@@ -145,7 +147,7 @@ class resup(nn.Module):
         style_channels: int,
         sz: int,
         concatenation: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.conv = nn.Sequential()
         self.conv.add_module("conv_0", batchconv(in_channels, out_channels, sz))
@@ -216,7 +218,7 @@ class convup(nn.Module):
 
 
 class make_style(nn.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         # self.pool_all = nn.AvgPool2d(28)
         self.flatten = nn.Flatten()
@@ -237,7 +239,7 @@ class upsample(nn.Module):
         sz: int,
         residual_on: bool = True,
         concatenation: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.upsampling = nn.Upsample(scale_factor=2, mode="nearest")
         self.up = nn.Sequential()
@@ -280,7 +282,7 @@ class CPnet(nn.Module):
         concatenation: bool = False,
         mkldnn: bool = False,
         diam_mean: Union[float, torch.nn.parameter.Parameter] = 30.0,
-    ):
+    ) -> None:
         super(CPnet, self).__init__()
         self.nbase = nbase
         self.nout = nout

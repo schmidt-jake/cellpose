@@ -1,8 +1,9 @@
 import logging
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 import warnings
 
 import cv2
+from numpy import ndarray
 import numpy as np
 import numpy.typing as npt
 
@@ -209,7 +210,7 @@ def normalize99(Y: npt.NDArray, lower: int = 1, upper: int = 99) -> npt.NDArray:
     return X
 
 
-def move_axis(img, m_axis=-1, first=True):
+def move_axis(img: ndarray, m_axis: int = -1, first: bool = True) -> ndarray:
     """move axis m_axis to first or last position"""
     if m_axis == -1:
         m_axis = img.ndim - 1
@@ -568,8 +569,13 @@ def reshape_and_normalize_data(
 
 
 def resize_image(
-    img0, Ly=None, Lx=None, rsz=None, interpolation=cv2.INTER_LINEAR, no_channels=False
-):
+    img0: ndarray,
+    Ly: Optional[int] = None,
+    Lx: Optional[int] = None,
+    rsz: None = None,
+    interpolation: int = cv2.INTER_LINEAR,
+    no_channels: bool = False,
+) -> ndarray:
     """resize image for computing flows / unresize for computing dynamics
 
     Parameters
@@ -624,7 +630,9 @@ def resize_image(
     return imgs
 
 
-def pad_image_ND(img0, div=16, extra=1):
+def pad_image_ND(
+    img0: ndarray, div: int = 16, extra: int = 1
+) -> Tuple[ndarray, ndarray, ndarray]:
     """pad image for test-time so that its dimensions are a multiple of 16 (2D or 3D)
 
     Parameters

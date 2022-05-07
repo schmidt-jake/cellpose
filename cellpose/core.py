@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 import cv2
 import fastremap
+from numpy import ndarray
 import numpy as np
 import numpy.typing as npt
 from scipy.stats import mode
@@ -57,7 +58,7 @@ def parse_model_string(pretrained_model):
             return nclasses, False, False, True
 
 
-def use_gpu(gpu_number=0, use_torch=True):
+def use_gpu(gpu_number: int = 0, use_torch: bool = True) -> bool:
     """check if gpu works"""
     if use_torch:
         return _use_gpu_torch(gpu_number)
@@ -65,7 +66,7 @@ def use_gpu(gpu_number=0, use_torch=True):
         raise ValueError("cellpose only runs with pytorch now")
 
 
-def _use_gpu_torch(gpu_number: int = 0):
+def _use_gpu_torch(gpu_number: int = 0) -> bool:
     try:
         device = torch.device("cuda:" + str(gpu_number))
         _ = torch.zeros([1, 2, 3]).to(device)
@@ -76,7 +77,7 @@ def _use_gpu_torch(gpu_number: int = 0):
         return False
 
 
-def assign_device(gpu: bool = False, device: int = 0):
+def assign_device(gpu: bool = False, device: int = 0) -> Tuple[torch.device, bool]:
     if gpu and use_gpu(use_torch=True):
         device = torch.device(f"cuda:{device}")
         gpu = True
@@ -116,7 +117,7 @@ class UnetModel:
         concatenation: bool = True,
         nclasses: int = 3,
         nchan: int = 2,
-    ):
+    ) -> None:
         self.unet = True
         self.torch = True
         self.mkldnn = None
@@ -393,7 +394,7 @@ class UnetModel:
         tile_overlap: float = 0.1,
         bsize: int = 224,
         return_conv: bool = False,
-        progress=None,
+        progress: None = None,
     ) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
         """run network (if more than one, loop over networks and average results
 

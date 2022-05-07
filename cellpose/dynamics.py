@@ -6,6 +6,9 @@ from typing import List, Optional, Tuple
 import cv2
 import fastremap
 from numba import njit
+from numpy import float64
+from numpy import ndarray
+from numpy import number
 import numpy as np
 import numpy.typing as npt
 import scipy.ndimage
@@ -656,7 +659,9 @@ def remove_bad_flow_masks(
     return masks
 
 
-def get_masks(p: npt.NDArray, iscell=None, rpad: int = 20):
+def get_masks(
+    p: npt.NDArray, iscell: Optional[ndarray] = None, rpad: int = 20
+) -> ndarray:
     """create masks using pixel convergence after running dynamics
 
     Makes a histogram of final pixel locations p, initializes masks
@@ -774,19 +779,19 @@ def get_masks(p: npt.NDArray, iscell=None, rpad: int = 20):
 
 
 def compute_masks(
-    dP,
-    cellprob,
-    p=None,
-    niter=200,
-    cellprob_threshold=0.0,
-    flow_threshold=0.4,
-    interp=True,
-    do_3D=False,
-    min_size=15,
-    resize=None,
-    use_gpu=False,
-    device=None,
-):
+    dP: ndarray,
+    cellprob: ndarray,
+    p: None = None,
+    niter: float64 = 200,
+    cellprob_threshold: float = 0.0,
+    flow_threshold: float = 0.4,
+    interp: bool = True,
+    do_3D: bool = False,
+    min_size: int = 15,
+    resize: None = None,
+    use_gpu: bool = False,
+    device: Optional[torch.device] = None,
+) -> Tuple[ndarray, ndarray]:
     """compute masks using dynamics from dP, cellprob, and boundary"""
 
     cp_mask = cellprob > cellprob_threshold

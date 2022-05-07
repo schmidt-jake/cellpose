@@ -57,6 +57,8 @@ def logger_setup():
     return logger, log_file
 
 
+from numpy import ndarray
+
 from . import plot
 from . import transforms
 from . import utils
@@ -77,7 +79,7 @@ def outlines_to_text(base, outlines):
             f.write("\n")
 
 
-def imread(filename):
+def imread(filename: str) -> ndarray:
     ext = os.path.splitext(filename)[-1]
     if ext == ".tif" or ext == ".tiff":
         with tifffile.TiffFile(filename) as tif:

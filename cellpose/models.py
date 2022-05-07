@@ -4,6 +4,9 @@ import pathlib
 import time
 from typing import List, Optional, Tuple
 
+from numpy import float64
+from numpy import ndarray
+from numpy import number
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -106,7 +109,7 @@ class Cellpose(object):
         model_type: str = "cyto",
         net_avg: bool = False,
         device: Optional[torch.device] = None,
-    ):
+    ) -> None:
         super(Cellpose, self).__init__()
         self.torch = True
 
@@ -159,7 +162,7 @@ class Cellpose(object):
         min_size: int = 15,
         stitch_threshold: float = 0.0,
         rescale: Optional[float] = None,
-        progress=None,
+        progress: None = None,
         model_loaded: bool = False,
     ) -> Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray, np.float64]:
         """run cellpose and get masks
@@ -393,7 +396,7 @@ class CellposeModel(UnetModel):
         style_on: bool = True,
         concatenation: bool = False,
         nchan: int = 2,
-    ):
+    ) -> None:
         self.torch = True
         if isinstance(pretrained_model, np.ndarray):
             pretrained_model = list(pretrained_model)
@@ -482,7 +485,7 @@ class CellposeModel(UnetModel):
         rescale: Optional[float] = None,
         diameter: Optional[float] = None,
         do_3D: bool = False,
-        anisotropy=None,
+        anisotropy: None = None,
         net_avg: bool = False,
         augment: bool = False,
         tile: bool = True,
@@ -494,7 +497,7 @@ class CellposeModel(UnetModel):
         compute_masks: bool = True,
         min_size: int = 15,
         stitch_threshold: float = 0.0,
-        progress=None,
+        progress: None = None,
         loop_run: bool = False,
         model_loaded: bool = False,
     ) -> Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray]:
@@ -1033,7 +1036,9 @@ class SizeModel(object):
 
     """
 
-    def __init__(self, cp_model: CellposeModel, pretrained_size: Optional[str] = None):
+    def __init__(
+        self, cp_model: CellposeModel, pretrained_size: Optional[str] = None
+    ) -> None:
         super().__init__()
         self.pretrained_size = pretrained_size
         self.cp = cp_model

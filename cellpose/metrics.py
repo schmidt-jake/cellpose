@@ -1,8 +1,12 @@
+from typing import Optional, Tuple
+
 from numba import jit
+from numpy import ndarray
 import numpy as np
 from scipy.ndimage import convolve
 from scipy.ndimage import mean
 from scipy.optimize import linear_sum_assignment
+from torch import device
 
 from cellpose import dynamics
 from cellpose import utils
@@ -255,7 +259,12 @@ def _true_positive(iou, th):
     return tp
 
 
-def flow_error(maski, dP_net, use_gpu=False, device=None):
+def flow_error(
+    maski: ndarray,
+    dP_net: ndarray,
+    use_gpu: bool = False,
+    device: Optional[device] = None,
+) -> Tuple[ndarray, ndarray]:
     """error in flows from predicted masks vs flows predicted by network run on image
 
     This function serves to benchmark the quality of masks, it works as follows
