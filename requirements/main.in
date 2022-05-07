@@ -1,0 +1,9 @@
+fastremap
+natsort
+numba
+numpy
+opencv-python
+tifffile
+torch
+tqdm
+scipy
