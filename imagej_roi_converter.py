@@ -1,5 +1,6 @@
 from ij import IJ
-from ij.gui import PolygonRoi, Roi
+from ij.gui import PolygonRoi
+from ij.gui import Roi
 from ij.plugin.frame import RoiManager
 from java.awt import FileDialog
 

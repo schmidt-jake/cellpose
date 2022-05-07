@@ -1,19 +1,25 @@
+from glob import glob
 import os
+from pathlib import Path
 import shutil
 import string
 import sys
-from glob import glob
-from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib import rc
+import matplotlib.pyplot as plt
 from natsort import natsorted
+import numpy as np
 from scipy import stats
 from scipy.ndimage import find_objects
 from scipy.optimize import linear_sum_assignment
 
-from cellpose import datasets, io, metrics, models, plot, transforms, utils
+from cellpose import datasets
+from cellpose import io
+from cellpose import metrics
+from cellpose import models
+from cellpose import plot
+from cellpose import transforms
+from cellpose import utils
 
 thresholds = np.arange(0.5, 1.05, 0.05)
 

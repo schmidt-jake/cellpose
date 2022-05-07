@@ -6,11 +6,14 @@ import subprocess
 import sys
 import time
 
-import numpy as np
 from natsort import natsorted
+import numpy as np
 from tqdm import tqdm
 
-from cellpose import core, io, models, utils
+from cellpose import core
+from cellpose import io
+from cellpose import models
+from cellpose import utils
 
 try:
     from cellpose.gui import gui

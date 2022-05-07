@@ -9,11 +9,14 @@ import time
 
 import numpy as np
 import torch
+from torch import optim
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import optim
 
-from . import dynamics, io, transforms, utils
+from . import dynamics
+from . import io
+from . import transforms
+from . import utils
 
 sz = 3
 

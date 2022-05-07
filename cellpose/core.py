@@ -1,25 +1,22 @@
 import datetime
 import logging
 import os
-import pathlib
-import shutil
-import subprocess
-import sys
-import tempfile
 import time
-from urllib.parse import urlparse
 
 import cv2
 import fastremap
 import numpy as np
-import torch
 from scipy.stats import mode
-#     from GPUtil import showUtilization as gpu_usage #for gpu memory debugging
+import torch
 from torch import nn
 from torch.utils import mkldnn as mkldnn_utils
-from tqdm import tqdm, trange
+from tqdm import tqdm
+from tqdm import trange
 
-from . import dynamics, metrics, plot, resnet_torch, transforms, utils
+from cellpose import metrics
+from cellpose import resnet_torch
+from cellpose import transforms
+from cellpose import utils
 
 TORCH_ENABLED = True
 

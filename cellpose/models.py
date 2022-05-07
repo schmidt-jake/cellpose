@@ -8,8 +8,13 @@ from tqdm import trange
 
 models_logger = logging.getLogger(__name__)
 
-from . import dynamics, plot, transforms, utils
-from .core import UnetModel, assign_device, parse_model_string
+from . import dynamics
+from . import plot
+from . import transforms
+from . import utils
+from .core import assign_device
+from .core import parse_model_string
+from .core import UnetModel
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")

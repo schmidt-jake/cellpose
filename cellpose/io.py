@@ -1,21 +1,19 @@
 import datetime
-import gc
 import glob
 import logging
 import os
 import pathlib
+from pathlib import Path
 import sys
 import warnings
-from pathlib import Path
 
 import cv2
+from natsort import natsorted
 import numpy as np
 import tifffile
-from natsort import natsorted
 from tqdm import tqdm
 
 try:
-    from PyQt5 import Qt, QtCore, QtGui, QtWidgets
     from PyQt5.QtWidgets import QMessageBox
 
     GUI = True
@@ -59,7 +57,9 @@ def logger_setup():
     return logger, log_file
 
 
-from . import plot, transforms, utils
+from . import plot
+from . import transforms
+from . import utils
 
 
 # helper function to check for a path; if it doesn't exist, make it

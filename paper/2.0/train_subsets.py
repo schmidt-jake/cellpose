@@ -1,13 +1,15 @@
 import argparse
+from glob import glob
 import os
 import sys
-from glob import glob
 
-import numpy as np
 from datasets import *
-from tifffile import imread, imsave
+import numpy as np
+from tifffile import imread
+from tifffile import imsave
 
-from cellpose import metrics, models
+from cellpose import metrics
+from cellpose import models
 from cellpose.io import logger_setup
 
 

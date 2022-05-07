@@ -30,10 +30,10 @@ import os
 import pdb
 import sys
 
+from imgaug import augmenters as iaa
 import numpy as np
 # np.random.bit_generator = np.random._bit_generator
 import skimage.io
-from imgaug import augmenters as iaa
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("/groups/pachitariu/pachitariulab/code/github/Mask_RCNN")
@@ -42,7 +42,8 @@ ROOT_DIR = os.path.abspath("/groups/pachitariu/pachitariulab/code/github/Mask_RC
 sys.path.append(ROOT_DIR)  # To find local version of the library
 import matplotlib.pyplot as plt
 from mrcnn import model as modellib
-from mrcnn import utils, visualize
+from mrcnn import utils
+from mrcnn import visualize
 from mrcnn.config import Config
 from stardist import matching
 
