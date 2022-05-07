@@ -773,7 +773,7 @@ def compute_masks(
     cellprob: ndarray,
     p: None = None,
     niter: float64 = 200,
-    cellprob_threshold: Union[float, int] = 0.0,
+    cellprob_threshold: float = 0.0,
     flow_threshold: float = 0.4,
     interp: bool = True,
     do_3D: bool = False,

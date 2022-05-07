@@ -267,7 +267,7 @@ class CPnet(nn.Module):
         style_on: bool = True,
         concatenation: bool = False,
         mkldnn: bool = False,
-        diam_mean: Union[float, Parameter] = 30.0,
+        diam_mean: Union[Parameter, float] = 30.0,
     ) -> None:
         super(CPnet, self).__init__()
         self.nbase = nbase

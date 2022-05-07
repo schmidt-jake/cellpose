@@ -138,14 +138,14 @@ class Cellpose(torch.nn.Module):
     @torch.jit.export
     def my_eval(
         self,
-        x: Union[ndarray, List[ndarray]],
+        x: torch.Tensor,
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
-        channel_axis: None = None,
+        channel_axis: Optional[int] = None,
         z_axis: None = None,
         invert: bool = False,
         normalize: bool = True,
-        diameter: float = 30.0,
+        diameter: None = 30.0,
         do_3D: bool = False,
         anisotropy: None = None,
         net_avg: bool = False,
@@ -155,17 +155,13 @@ class Cellpose(torch.nn.Module):
         resample: bool = True,
         interp: bool = True,
         flow_threshold: float = 0.4,
-        cellprob_threshold: Union[float, int] = 0.0,
+        cellprob_threshold: float = 0.0,
         min_size: int = 15,
         stitch_threshold: float = 0.0,
         rescale: None = None,
         progress: None = None,
         model_loaded: bool = False,
-    ) -> Union[
-        Tuple[ndarray, List[ndarray], ndarray, int],
-        Tuple[ndarray, List[ndarray], ndarray, float64],
-        Tuple[List[ndarray], List[List[ndarray]], List[ndarray], int],
-    ]:
+    ) -> Tuple[ndarray, List[ndarray], ndarray, float64]:
         """run cellpose and get masks
 
         Parameters
@@ -453,15 +449,15 @@ class CellposeModel(UnetModel):
     @torch.jit.export
     def my_eval(
         self,
-        x: Union[ndarray, List[ndarray]],
+        x: torch.Tensor,
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
-        channel_axis: None = None,
+        channel_axis: Optional[int] = None,
         z_axis: None = None,
         normalize: bool = True,
         invert: bool = False,
         rescale: Optional[float64] = None,
-        diameter: Optional[int] = None,
+        diameter: None = None,
         do_3D: bool = False,
         anisotropy: None = None,
         net_avg: bool = False,
@@ -471,17 +467,14 @@ class CellposeModel(UnetModel):
         resample: bool = True,
         interp: bool = True,
         flow_threshold: float = 0.4,
-        cellprob_threshold: Union[float, int] = 0.0,
+        cellprob_threshold: float = 0.0,
         compute_masks: bool = True,
         min_size: int = 15,
         stitch_threshold: float = 0.0,
         progress: None = None,
         loop_run: bool = False,
         model_loaded: bool = False,
-    ) -> Union[
-        Tuple[List[ndarray], List[List[ndarray]], List[ndarray]],
-        Tuple[ndarray, List[ndarray], ndarray],
-    ]:
+    ) -> Tuple[ndarray, List[ndarray], ndarray]:
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
 
@@ -700,11 +693,11 @@ class CellposeModel(UnetModel):
         augment: bool = False,
         tile: bool = True,
         tile_overlap: float = 0.1,
-        cellprob_threshold: Union[float, int] = 0.0,
+        cellprob_threshold: float = 0.0,
         flow_threshold: float = 0.4,
         min_size: int = 15,
         interp: bool = True,
-        anisotropy: Optional[float] = 1.0,
+        anisotropy: None = 1.0,
         do_3D: bool = False,
         stitch_threshold: float = 0.0,
     ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
@@ -1032,16 +1025,15 @@ class SizeModel(torch.nn.Module):
     @torch.jit.export
     def my_eval(
         self,
-        x: ndarray,
+        x: torch.Tensor,
         channels: Optional[List[int]] = None,
-        channel_axis: None = None,
+        channel_axis: Optional[int] = None,
         normalize: bool = True,
         invert: bool = False,
         augment: bool = False,
         tile: bool = True,
         batch_size: int = 8,
         progress: None = None,
-        interp: bool = True,
     ) -> Tuple[float64, float64]:
         """use images x to produce style or use style input to predict size of objects in image
 
@@ -1125,7 +1117,6 @@ class SizeModel(torch.nn.Module):
             return diams, diams_style
 
         if x.squeeze().ndim > 3:
-            models_logger.warning("image is not 2D cannot compute diameter")
             return self.diam_mean, self.diam_mean
 
         styles = self.cp.my_eval(

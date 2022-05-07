@@ -7,6 +7,7 @@ from numpy import float64
 from numpy import int64
 from numpy import ndarray
 import numpy as np
+import torch
 
 transforms_logger = logging.getLogger(__name__)
 
@@ -211,7 +212,7 @@ def normalize99(Y: ndarray, lower: int = 1, upper: int = 99) -> ndarray:
     return X
 
 
-def move_axis(img: ndarray, m_axis: int = -1, first: bool = True) -> ndarray:
+def move_axis(img: torch.Tensor, m_axis: int = -1, first: bool = True) -> torch.Tensor:
     """move axis m_axis to first or last position"""
     if m_axis == -1:
         m_axis = img.ndim - 1
@@ -223,7 +224,7 @@ def move_axis(img: ndarray, m_axis: int = -1, first: bool = True) -> ndarray:
     else:
         axes[m_axis:-1] = axes[m_axis + 1 :]
         axes[-1] = m_axis
-    img = img.transpose(tuple(axes))
+    img = img.permute(tuple(axes))
     return img
 
 
@@ -261,9 +262,9 @@ def update_axis(m_axis, to_squeeze, ndim):
 
 
 def convert_image(
-    x: ndarray,
+    x: torch.Tensor,
     channels: List[int],
-    channel_axis: None = None,
+    channel_axis: Optional[int] = None,
     z_axis: None = None,
     do_3D: bool = False,
     normalize: bool = True,
@@ -351,7 +352,7 @@ def convert_image(
 
 
 def reshape(
-    data: ndarray, channels: List[int] = [0, 0], chan_first: bool = False
+    data: torch.Tensor, channels: List[int] = [0, 0], chan_first: bool = False
 ) -> ndarray:
     """reshape data using channels
 
@@ -375,7 +376,7 @@ def reshape(
     data : numpy array that's (Z x ) Ly x Lx x nchan (if chan_first==False)
 
     """
-    data = data.astype(np.float32)
+    data = data.float()
     if data.ndim < 3:
         data = data[:, :, np.newaxis]
     elif data.shape[0] < 8 and data.ndim == 3:
