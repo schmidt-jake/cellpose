@@ -142,7 +142,7 @@ class Cellpose:
 
     def eval(
         self,
-        x: Union[List[ndarray], ndarray],
+        x: Union[ndarray, List[ndarray]],
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
         channel_axis: None = None,
@@ -166,9 +166,9 @@ class Cellpose:
         progress: None = None,
         model_loaded: bool = False,
     ) -> Union[
-        Tuple[List[ndarray], List[List[ndarray]], List[ndarray], int],
         Tuple[ndarray, List[ndarray], ndarray, int],
         Tuple[ndarray, List[ndarray], ndarray, float64],
+        Tuple[List[ndarray], List[List[ndarray]], List[ndarray], int],
     ]:
         """run cellpose and get masks
 
@@ -483,7 +483,7 @@ class CellposeModel(UnetModel):
 
     def eval(
         self,
-        x: Union[List[ndarray], ndarray],
+        x: Union[ndarray, List[ndarray]],
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
         channel_axis: None = None,
@@ -509,8 +509,8 @@ class CellposeModel(UnetModel):
         loop_run: bool = False,
         model_loaded: bool = False,
     ) -> Union[
-        Tuple[ndarray, List[ndarray], ndarray],
         Tuple[List[ndarray], List[List[ndarray]], List[ndarray]],
+        Tuple[ndarray, List[ndarray], ndarray],
     ]:
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
