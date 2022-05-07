@@ -149,7 +149,7 @@ class Cellpose:
         z_axis: None = None,
         invert: bool = False,
         normalize: bool = True,
-        diameter: int = 30.0,
+        diameter: float = 30.0,
         do_3D: bool = False,
         anisotropy: None = None,
         net_avg: bool = False,
@@ -735,7 +735,7 @@ class CellposeModel(UnetModel):
         flow_threshold: float = 0.4,
         min_size: int = 15,
         interp: bool = True,
-        anisotropy: None = 1.0,
+        anisotropy: Optional[float] = 1.0,
         do_3D: bool = False,
         stitch_threshold: float = 0.0,
     ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
