@@ -1,16 +1,15 @@
-import os, sys, time, shutil, tempfile, datetime, pathlib, subprocess
-from pathlib import Path
-import numpy as np
-from tqdm import trange, tqdm
-from urllib.parse import urlparse
-import torch
-
 import logging
+import os
+import pathlib
+import time
+
+import numpy as np
+from tqdm import trange
 
 models_logger = logging.getLogger(__name__)
 
-from . import transforms, dynamics, utils, plot
-from .core import UnetModel, assign_device, check_mkl, parse_model_string
+from . import dynamics, plot, transforms, utils
+from .core import UnetModel, assign_device, parse_model_string
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")
