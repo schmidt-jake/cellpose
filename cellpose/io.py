@@ -5,34 +5,41 @@ import os
 import pathlib
 from pathlib import Path
 import sys
+from typing import List, Optional, Union
 import warnings
 
 import cv2
 from natsort import natsorted
+from numpy import float32
+from numpy import ndarray
 import numpy as np
 import tifffile
 from tqdm import tqdm
+
+from cellpose import plot
+from cellpose import transforms
+from cellpose import utils
 
 try:
 
     from PyQt5.QtWidgets import QMessageBox
 
     GUI = True
-except:
+except ImportError:
     GUI = False
 
 try:
     import matplotlib.pyplot as plt
 
     MATPLOTLIB = True
-except:
+except ImportError:
     MATPLOTLIB = False
 
 try:
     from google.cloud import storage
 
     SERVER_UPLOAD = True
-except:
+except ImportError:
     SERVER_UPLOAD = False
 
 io_logger = logging.getLogger(__name__)
@@ -44,7 +51,7 @@ def logger_setup():
     log_file = cp_dir.joinpath("run.log")
     try:
         log_file.unlink()
-    except:
+    except FileNotFoundError:
         print("creating new log file")
     logging.basicConfig(
         level=logging.INFO,
@@ -56,16 +63,6 @@ def logger_setup():
     # logger.handlers[1].stream = sys.stdout
 
     return logger, log_file
-
-
-from typing import List, Optional, Union
-
-from numpy import float32
-from numpy import ndarray
-
-from . import plot
-from . import transforms
-from . import utils
 
 
 # helper function to check for a path; if it doesn't exist, make it
