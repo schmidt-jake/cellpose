@@ -483,7 +483,7 @@ class CellposeModel(UnetModel):
         z_axis: int = None,
         normalize: bool = True,
         invert: bool = False,
-        rescale: Optional[float] = None,
+        rescale: Optional[Union[float, torch.Tensor]] = None,
         diameter: Optional[float] = None,
         do_3D: bool = False,
         anisotropy=None,
@@ -686,8 +686,8 @@ class CellposeModel(UnetModel):
                 diameter = self.diam_labels
                 rescale = self.diam_mean / diameter
 
-            if isinstance(rescale, torch.Tensor):
-                rescale = rescale.item()
+            # if isinstance(rescale, torch.Tensor):
+            #     rescale = rescale.item()
 
             masks, styles, dP, cellprob, p = self._run_cp(
                 x,
@@ -718,7 +718,8 @@ class CellposeModel(UnetModel):
         compute_masks: bool = True,
         normalize: bool = True,
         invert: bool = False,
-        rescale: np.number = 1.0,  # type: ignore[assignment]
+        # rescale: Union[np.number, float] = 1.0,
+        rescale=1.0,
         net_avg: bool = False,
         resample: bool = True,
         augment: bool = False,
