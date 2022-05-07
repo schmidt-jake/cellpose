@@ -4,10 +4,8 @@ import pathlib
 import time
 from typing import Any, List, Optional, Tuple, Union
 
-from numpy import float32
-from numpy import float64
-from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 import torch
 from tqdm import trange
 
@@ -109,7 +107,7 @@ class Cellpose:
         net_avg: bool = False,
         device: None = None,
     ) -> None:
-        super(Cellpose, self).__init__()
+        super().__init__()
         self.torch = True
 
         # assign device (GPU or CPU)
@@ -142,14 +140,14 @@ class Cellpose:
 
     def eval(
         self,
-        x: Union[ndarray, List[ndarray]],
+        x: Union[npt.NDArray, List[npt.NDArray]],
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
-        channel_axis: None = None,
-        z_axis: None = None,
+        channel_axis: Optional[int] = None,
+        z_axis: Optional[int] = None,
         invert: bool = False,
         normalize: bool = True,
-        diameter: float = 30.0,
+        diameter: Optional[float] = 30.0,
         do_3D: bool = False,
         anisotropy: None = None,
         net_avg: bool = False,
@@ -166,9 +164,9 @@ class Cellpose:
         progress: None = None,
         model_loaded: bool = False,
     ) -> Union[
-        Tuple[ndarray, List[ndarray], ndarray, int],
-        Tuple[ndarray, List[ndarray], ndarray, float64],
-        Tuple[List[ndarray], List[List[ndarray]], List[ndarray], int],
+        Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray, int],
+        Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray, np.float64],
+        Tuple[List[npt.NDArray], List[List[npt.NDArray]], List[npt.NDArray], int],
     ]:
         """run cellpose and get masks
 
@@ -483,17 +481,17 @@ class CellposeModel(UnetModel):
 
     def eval(
         self,
-        x: Union[ndarray, List[ndarray]],
+        x: Union[npt.NDArray, List[npt.NDArray]],
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
-        channel_axis: None = None,
-        z_axis: None = None,
+        channel_axis: Optional[int] = None,
+        z_axis: Optional[int] = None,
         normalize: bool = True,
         invert: bool = False,
-        rescale: Optional[float64] = None,
+        rescale: Optional[np.float64] = None,
         diameter: Optional[int] = None,
         do_3D: bool = False,
-        anisotropy: None = None,
+        anisotropy: Optional[float] = None,
         net_avg: bool = False,
         augment: bool = False,
         tile: bool = True,
@@ -509,8 +507,8 @@ class CellposeModel(UnetModel):
         loop_run: bool = False,
         model_loaded: bool = False,
     ) -> Union[
-        Tuple[List[ndarray], List[List[ndarray]], List[ndarray]],
-        Tuple[ndarray, List[ndarray], ndarray],
+        Tuple[List[npt.NDArray], List[List[npt.NDArray]], List[npt.NDArray]],
+        Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray],
     ]:
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
@@ -721,11 +719,11 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x: ndarray,
+        x: npt.NDArray,
         compute_masks: bool = True,
         normalize: bool = True,
         invert: bool = False,
-        rescale: Union[float32, float64] = 1.0,
+        rescale: Union[np.float32, np.float64] = 1.0,
         net_avg: bool = False,
         resample: bool = True,
         augment: bool = False,
@@ -738,7 +736,7 @@ class CellposeModel(UnetModel):
         anisotropy: Optional[float] = 1.0,
         do_3D: bool = False,
         stitch_threshold: float = 0.0,
-    ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
+    ) -> Tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
 
         tic = time.time()
         shape = x.shape
@@ -1028,7 +1026,7 @@ class CellposeModel(UnetModel):
         return model_path
 
 
-class SizeModel:
+class SizeModel(object):
     """linear regression model for determining the size of objects in image
     used to rescale before input to cp_model
     uses styles from cp_model
@@ -1056,7 +1054,7 @@ class SizeModel:
         pretrained_size: Optional[str] = None,
         **kwargs,
     ) -> None:
-        super(SizeModel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.pretrained_size = pretrained_size
         self.cp = cp_model
@@ -1075,9 +1073,9 @@ class SizeModel:
 
     def eval(
         self,
-        x: ndarray,
+        x: npt.NDArray,
         channels: Optional[List[int]] = None,
-        channel_axis: None = None,
+        channel_axis: Optional[int] = None,
         normalize: bool = True,
         invert: bool = False,
         augment: bool = False,
@@ -1085,7 +1083,7 @@ class SizeModel:
         batch_size: int = 8,
         progress: None = None,
         interp: bool = True,
-    ) -> Tuple[float64, float64]:
+    ) -> Tuple[np.float64, np.float64]:
         """use images x to produce style or use style input to predict size of objects in image
 
         Object size estimation is done in two steps:
@@ -1212,7 +1210,7 @@ class SizeModel:
         diam = self.diam_mean if (diam == 0 or np.isnan(diam)) else diam
         return diam, diam_style
 
-    def _size_estimation(self, style: ndarray) -> float64:
+    def _size_estimation(self, style: npt.NDArray) -> np.float64:
         """linear regression from style to size
 
         sizes were estimated using "diameters" from square estimates not circles;

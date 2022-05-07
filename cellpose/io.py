@@ -5,34 +5,39 @@ import os
 import pathlib
 from pathlib import Path
 import sys
+from typing import List, Optional, Union
 import warnings
 
 import cv2
 from natsort import natsorted
 import numpy as np
+import numpy.typing as npt
 import tifffile
 from tqdm import tqdm
 
-try:
+from cellpose import plot
+from cellpose import transforms
+from cellpose import utils
 
+try:
     from PyQt5.QtWidgets import QMessageBox
 
     GUI = True
-except:
+except ImportError:
     GUI = False
 
 try:
     import matplotlib.pyplot as plt
 
     MATPLOTLIB = True
-except:
+except ImportError:
     MATPLOTLIB = False
 
 try:
     from google.cloud import storage
 
     SERVER_UPLOAD = True
-except:
+except ImportError:
     SERVER_UPLOAD = False
 
 io_logger = logging.getLogger(__name__)
@@ -44,7 +49,7 @@ def logger_setup():
     log_file = cp_dir.joinpath("run.log")
     try:
         log_file.unlink()
-    except:
+    except FileNotFoundError:
         print("creating new log file")
     logging.basicConfig(
         level=logging.INFO,
@@ -56,16 +61,6 @@ def logger_setup():
     # logger.handlers[1].stream = sys.stdout
 
     return logger, log_file
-
-
-from typing import List, Optional, Union
-
-from numpy import float32
-from numpy import ndarray
-
-from . import plot
-from . import transforms
-from . import utils
 
 
 # helper function to check for a path; if it doesn't exist, make it
@@ -83,7 +78,7 @@ def outlines_to_text(base, outlines):
             f.write("\n")
 
 
-def imread(filename: str) -> ndarray:
+def imread(filename: str) -> npt.NDArray:
     ext = os.path.splitext(filename)[-1]
     if ext == ".tif" or ext == ".tiff":
         with tifffile.TiffFile(filename) as tif:
@@ -127,7 +122,7 @@ def imread(filename: str) -> ndarray:
             return None
 
 
-def imsave(filename: str, arr: ndarray) -> None:
+def imsave(filename: str, arr: npt.NDArray) -> None:
     ext = os.path.splitext(filename)[-1]
     if ext == ".tif" or ext == ".tiff":
         tifffile.imsave(filename, arr)
@@ -281,10 +276,10 @@ def load_train_test_data(
 
 
 def masks_flows_to_seg(
-    images: Union[ndarray, List[ndarray]],
-    masks: Union[ndarray, List[ndarray]],
-    flows: List[Union[ndarray, List[ndarray]]],
-    diams: Union[int, float32],
+    images: Union[npt.NDArray, List[npt.NDArray]],
+    masks: Union[npt.NDArray, List[npt.NDArray]],
+    flows: List[Union[npt.NDArray, List[npt.NDArray]]],
+    diams: Union[int, np.float32],
     file_names: Union[str, List[str]],
     channels: Optional[List[int]] = None,
 ) -> None:
@@ -430,7 +425,7 @@ def save_masks(
     in_folders=False,
     savedir=None,
     save_txt=True,
-):
+) -> None:
     """save masks + nicely plotted segmentation image to png and/or tiff
 
     if png, masks[k] for images[k] are saved to file_names[k]+'_cp_masks.png'
