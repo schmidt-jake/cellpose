@@ -1,8 +1,13 @@
+from typing import List, Optional, Tuple
+
 from numba import jit
+from numpy import int64
+from numpy import ndarray
 import numpy as np
 from scipy.ndimage import convolve
 from scipy.ndimage import mean
 from scipy.optimize import linear_sum_assignment
+from torch import device
 
 from . import dynamics
 from . import utils
@@ -74,7 +79,9 @@ def aggregated_jaccard_index(masks_true, masks_pred):
     return aji
 
 
-def average_precision(masks_true, masks_pred, threshold=[0.5, 0.75, 0.9]):
+def average_precision(
+    masks_true: ndarray, masks_pred: ndarray, threshold: List[float] = [0.5, 0.75, 0.9]
+) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
     """average precision estimation: AP = TP / (TP + FP + FN)
 
     This function is based heavily on the *fast* stardist matching functions
@@ -173,7 +180,7 @@ def _label_overlap(x, y):
     return overlap
 
 
-def _intersection_over_union(masks_true, masks_pred):
+def _intersection_over_union(masks_true: ndarray, masks_pred: ndarray) -> ndarray:
     """intersection over union of all mask pairs
 
     Parameters
@@ -215,7 +222,7 @@ def _intersection_over_union(masks_true, masks_pred):
     return iou
 
 
-def _true_positive(iou, th):
+def _true_positive(iou: ndarray, th: float) -> int64:
     """true positive at threshold th
 
     Parameters
@@ -255,7 +262,12 @@ def _true_positive(iou, th):
     return tp
 
 
-def flow_error(maski, dP_net, use_gpu=False, device=None):
+def flow_error(
+    maski: ndarray,
+    dP_net: ndarray,
+    use_gpu: bool = False,
+    device: Optional[device] = None,
+) -> Tuple[ndarray, ndarray]:
     """error in flows from predicted masks vs flows predicted by network run on image
 
     This function serves to benchmark the quality of masks, it works as follows

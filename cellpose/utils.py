@@ -1,17 +1,21 @@
 import colorsys
 import datetime
 import io
+from logging import Logger
 import os
 import pathlib
 import shutil
 import subprocess
 import tempfile
 import time
+from typing import Optional, Tuple
 from urllib.parse import urlparse
 from urllib.request import urlopen
 import warnings
 
 import cv2
+from numpy import float64
+from numpy import ndarray
 import numpy as np
 from scipy.ndimage import binary_fill_holes
 from scipy.ndimage import find_objects
@@ -43,15 +47,15 @@ class TqdmToLogger(io.StringIO):
     level = None
     buf = ""
 
-    def __init__(self, logger, level=None):
+    def __init__(self, logger: Logger, level: Optional[int] = None) -> None:
         super(TqdmToLogger, self).__init__()
         self.logger = logger
         self.level = level or logging.INFO
 
-    def write(self, buf):
+    def write(self, buf: str) -> None:
         self.buf = buf.strip("\r\n\t ")
 
-    def flush(self):
+    def flush(self) -> None:
         self.logger.log(self.level, self.buf)
 
 
@@ -220,7 +224,7 @@ def remove_edge_masks(masks, change_index=True):
     return masks
 
 
-def masks_to_outlines(masks):
+def masks_to_outlines(masks: ndarray) -> ndarray:
     """get outlines of masks as a 0-1 array
 
     Parameters
@@ -448,7 +452,7 @@ def stitch3D(masks, stitch_threshold=0.25):
     return masks
 
 
-def diameters(masks):
+def diameters(masks: ndarray) -> Tuple[float64, ndarray]:
     _, counts = np.unique(np.int32(masks), return_counts=True)
     counts = counts[1:]
     md = np.median(counts**0.5)
@@ -485,7 +489,7 @@ def process_cells(M0, npix=20):
     return M0
 
 
-def fill_holes_and_remove_small_masks(masks, min_size=15):
+def fill_holes_and_remove_small_masks(masks: ndarray, min_size: int = 15) -> ndarray:
     """fill holes in masks (2D/3D) and discard masks smaller than min_size (2D)
 
     fill holes in each mask using scipy.ndimage.morphology.binary_fill_holes

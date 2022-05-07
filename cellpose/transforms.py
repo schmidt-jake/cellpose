@@ -6,11 +6,17 @@ import numpy as np
 
 transforms_logger = logging.getLogger(__name__)
 
+from typing import List, Optional, Tuple
+
+from numpy import float64
+from numpy import int64
+from numpy import ndarray
+
 from . import dynamics
 from . import utils
 
 
-def _taper_mask(ly=224, lx=224, sig=7.5):
+def _taper_mask(ly: int = 224, lx: int = 224, sig: float = 7.5) -> ndarray:
     bsize = max(224, max(ly, lx))
     xm = np.arange(bsize)
     xm = np.abs(xm - xm.mean())
@@ -59,7 +65,9 @@ def unaugment_tiles(y, unet=False):
     return y
 
 
-def average_tiles(y, ysub, xsub, Ly, Lx):
+def average_tiles(
+    y: ndarray, ysub: List[List[int64]], xsub: List[List[int64]], Ly: int, Lx: int
+) -> ndarray:
     """average results of network over tiles
 
     Parameters
@@ -100,7 +108,9 @@ def average_tiles(y, ysub, xsub, Ly, Lx):
     return yf
 
 
-def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
+def make_tiles(
+    imgi: ndarray, bsize: int = 224, augment: bool = False, tile_overlap: float = 0.1
+) -> Tuple[ndarray, List[List[int64]], List[List[int64]], int, int]:
     """make tiles of image to run at test-time
 
     if augmented, tiles are flipped and tile_overlap=2.
@@ -197,7 +207,7 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
     return IMG, ysub, xsub, Ly, Lx
 
 
-def normalize99(Y, lower=1, upper=99):
+def normalize99(Y: ndarray, lower: int = 1, upper: int = 99) -> ndarray:
     """normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile"""
     X = Y.copy()
     x01 = np.percentile(X, lower)
@@ -206,7 +216,7 @@ def normalize99(Y, lower=1, upper=99):
     return X
 
 
-def move_axis(img, m_axis=-1, first=True):
+def move_axis(img: ndarray, m_axis: int = -1, first: bool = True) -> ndarray:
     """move axis m_axis to first or last position"""
     if m_axis == -1:
         m_axis = img.ndim - 1
@@ -224,7 +234,7 @@ def move_axis(img, m_axis=-1, first=True):
 
 # This was edited to fix a bug where single-channel images of shape (y,x) would be
 # transposed to (x,y) if x<y, making the labels no longer correspond to the data.
-def move_min_dim(img, force=False):
+def move_min_dim(img: ndarray, force: bool = False) -> ndarray:
     """move minimum dimension last as channels if < 10, or force==True"""
     if (
         len(img.shape) > 2
@@ -256,15 +266,15 @@ def update_axis(m_axis, to_squeeze, ndim):
 
 
 def convert_image(
-    x,
-    channels,
-    channel_axis=None,
-    z_axis=None,
-    do_3D=False,
-    normalize=True,
-    invert=False,
-    nchan=2,
-):
+    x: ndarray,
+    channels: List[int],
+    channel_axis: None = None,
+    z_axis: None = None,
+    do_3D: bool = False,
+    normalize: bool = True,
+    invert: bool = False,
+    nchan: int = 2,
+) -> ndarray:
     """return image with z first, channels last and normalized intensities"""
 
     # squeeze image, and if channel_axis or z_axis given, transpose image
@@ -345,7 +355,9 @@ def convert_image(
     return x
 
 
-def reshape(data, channels=[0, 0], chan_first=False):
+def reshape(
+    data: ndarray, channels: List[int] = [0, 0], chan_first: bool = False
+) -> ndarray:
     """reshape data using channels
 
     Parameters
@@ -404,7 +416,7 @@ def reshape(data, channels=[0, 0], chan_first=False):
     return data
 
 
-def normalize_img(img, axis=-1, invert=False):
+def normalize_img(img: ndarray, axis: int = -1, invert: bool = False) -> ndarray:
     """normalize each channel of the image so that so that 0.0=1st percentile
     and 1.0=99th percentile of image intensities
 
@@ -557,8 +569,13 @@ def reshape_and_normalize_data(
 
 
 def resize_image(
-    img0, Ly=None, Lx=None, rsz=None, interpolation=cv2.INTER_LINEAR, no_channels=False
-):
+    img0: ndarray,
+    Ly: Optional[int] = None,
+    Lx: Optional[int] = None,
+    rsz: Optional[float64] = None,
+    interpolation: int = cv2.INTER_LINEAR,
+    no_channels: bool = False,
+) -> ndarray:
     """resize image for computing flows / unresize for computing dynamics
 
     Parameters
@@ -613,7 +630,9 @@ def resize_image(
     return imgs
 
 
-def pad_image_ND(img0, div=16, extra=1):
+def pad_image_ND(
+    img0: ndarray, div: int = 16, extra: int = 1
+) -> Tuple[ndarray, ndarray, ndarray]:
     """pad image for test-time so that its dimensions are a multiple of 16 (2D or 3D)
 
     Parameters

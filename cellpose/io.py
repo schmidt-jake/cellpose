@@ -62,6 +62,11 @@ def logger_setup():
     return logger, log_file
 
 
+from typing import List, Optional, Union
+
+from numpy import float32
+from numpy import ndarray
+
 from . import plot
 from . import transforms
 from . import utils
@@ -82,7 +87,7 @@ def outlines_to_text(base, outlines):
             f.write("\n")
 
 
-def imread(filename):
+def imread(filename: str) -> ndarray:
     ext = os.path.splitext(filename)[-1]
     if ext == ".tif" or ext == ".tiff":
         with tifffile.TiffFile(filename) as tif:
@@ -126,7 +131,7 @@ def imread(filename):
             return None
 
 
-def imsave(filename, arr):
+def imsave(filename: str, arr: ndarray) -> None:
     ext = os.path.splitext(filename)[-1]
     if ext == ".tif" or ext == ".tiff":
         tifffile.imsave(filename, arr)
@@ -279,7 +284,14 @@ def load_train_test_data(
     return images, labels, image_names, test_images, test_labels, test_image_names
 
 
-def masks_flows_to_seg(images, masks, flows, diams, file_names, channels=None):
+def masks_flows_to_seg(
+    images: Union[ndarray, List[ndarray]],
+    masks: Union[ndarray, List[ndarray]],
+    flows: List[Union[ndarray, List[ndarray]]],
+    diams: Union[int, float32],
+    file_names: Union[str, List[str]],
+    channels: Optional[List[int]] = None,
+) -> None:
     """save output of model eval to be loaded in GUI
 
     can be list output (run on multiple images) or single output (run on single image)

@@ -17,6 +17,12 @@ from tqdm import trange
 
 models_logger = logging.getLogger(__name__)
 
+from typing import Any, List, Optional, Tuple, Union
+
+from numpy import float32
+from numpy import float64
+from numpy import ndarray
+
 from . import dynamics
 from . import plot
 from . import transforms
@@ -49,7 +55,7 @@ MODEL_NAMES = [
 ]
 
 
-def model_path(model_type, model_index, use_torch=True):
+def model_path(model_type: str, model_index: int, use_torch: bool = True) -> str:
     torch_str = "torch"
     if model_type == "cyto" or model_type == "cyto2" or model_type == "nuclei":
         basename = "%s%s_%d" % (model_type, torch_str, model_index)
@@ -58,13 +64,13 @@ def model_path(model_type, model_index, use_torch=True):
     return cache_model_path(basename)
 
 
-def size_model_path(model_type, use_torch=True):
+def size_model_path(model_type: str, use_torch: bool = True) -> str:
     torch_str = "torch"
     basename = "size_%s%s_0.npy" % (model_type, torch_str)
     return cache_model_path(basename)
 
 
-def cache_model_path(basename):
+def cache_model_path(basename: str) -> str:
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     url = f"{_MODEL_URL}/{basename}"
     cached_file = os.fspath(MODEL_DIR.joinpath(basename))
@@ -74,7 +80,7 @@ def cache_model_path(basename):
     return cached_file
 
 
-def get_user_models():
+def get_user_models() -> List[Any]:
     model_list_path = os.fspath(MODEL_DIR.joinpath("gui_models.txt"))
     model_strings = []
     if os.path.exists(model_list_path):
@@ -107,7 +113,13 @@ class Cellpose:
 
     """
 
-    def __init__(self, gpu=False, model_type="cyto", net_avg=False, device=None):
+    def __init__(
+        self,
+        gpu: bool = False,
+        model_type: str = "cyto",
+        net_avg: bool = False,
+        device: None = None,
+    ) -> None:
         super(Cellpose, self).__init__()
         self.torch = True
 
@@ -141,30 +153,34 @@ class Cellpose:
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channel_axis=None,
-        z_axis=None,
-        invert=False,
-        normalize=True,
-        diameter=30.0,
-        do_3D=False,
-        anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        resample=True,
-        interp=True,
-        flow_threshold=0.4,
-        cellprob_threshold=0.0,
-        min_size=15,
-        stitch_threshold=0.0,
-        rescale=None,
-        progress=None,
-        model_loaded=False,
-    ):
+        x: Union[List[ndarray], ndarray],
+        batch_size: int = 8,
+        channels: Optional[List[int]] = None,
+        channel_axis: None = None,
+        z_axis: None = None,
+        invert: bool = False,
+        normalize: bool = True,
+        diameter: int = 30.0,
+        do_3D: bool = False,
+        anisotropy: None = None,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        resample: bool = True,
+        interp: bool = True,
+        flow_threshold: float = 0.4,
+        cellprob_threshold: Union[float, int] = 0.0,
+        min_size: int = 15,
+        stitch_threshold: float = 0.0,
+        rescale: None = None,
+        progress: None = None,
+        model_loaded: bool = False,
+    ) -> Union[
+        Tuple[List[ndarray], List[List[ndarray]], List[ndarray], int],
+        Tuple[ndarray, List[ndarray], ndarray, int],
+        Tuple[ndarray, List[ndarray], ndarray, float64],
+    ]:
         """run cellpose and get masks
 
         Parameters
@@ -388,17 +404,17 @@ class CellposeModel(UnetModel):
 
     def __init__(
         self,
-        gpu=False,
-        pretrained_model=False,
-        model_type=None,
-        net_avg=False,
-        diam_mean=30.0,
-        device=None,
-        residual_on=True,
-        style_on=True,
-        concatenation=False,
-        nchan=2,
-    ):
+        gpu: bool = False,
+        pretrained_model: bool = False,
+        model_type: Optional[str] = None,
+        net_avg: bool = False,
+        diam_mean: float = 30.0,
+        device: Optional[torch.device] = None,
+        residual_on: bool = True,
+        style_on: bool = True,
+        concatenation: bool = False,
+        nchan: int = 2,
+    ) -> None:
         self.torch = True
         if isinstance(pretrained_model, np.ndarray):
             pretrained_model = list(pretrained_model)
@@ -478,32 +494,35 @@ class CellposeModel(UnetModel):
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channel_axis=None,
-        z_axis=None,
-        normalize=True,
-        invert=False,
-        rescale=None,
-        diameter=None,
-        do_3D=False,
-        anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        resample=True,
-        interp=True,
-        flow_threshold=0.4,
-        cellprob_threshold=0.0,
-        compute_masks=True,
-        min_size=15,
-        stitch_threshold=0.0,
-        progress=None,
-        loop_run=False,
-        model_loaded=False,
-    ):
+        x: Union[List[ndarray], ndarray],
+        batch_size: int = 8,
+        channels: Optional[List[int]] = None,
+        channel_axis: None = None,
+        z_axis: None = None,
+        normalize: bool = True,
+        invert: bool = False,
+        rescale: Optional[float64] = None,
+        diameter: Optional[int] = None,
+        do_3D: bool = False,
+        anisotropy: None = None,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        resample: bool = True,
+        interp: bool = True,
+        flow_threshold: float = 0.4,
+        cellprob_threshold: Union[float, int] = 0.0,
+        compute_masks: bool = True,
+        min_size: int = 15,
+        stitch_threshold: float = 0.0,
+        progress: None = None,
+        loop_run: bool = False,
+        model_loaded: bool = False,
+    ) -> Union[
+        Tuple[ndarray, List[ndarray], ndarray],
+        Tuple[List[ndarray], List[List[ndarray]], List[ndarray]],
+    ]:
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
 
@@ -713,24 +732,24 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x,
-        compute_masks=True,
-        normalize=True,
-        invert=False,
-        rescale=1.0,
-        net_avg=False,
-        resample=True,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        cellprob_threshold=0.0,
-        flow_threshold=0.4,
-        min_size=15,
-        interp=True,
-        anisotropy=1.0,
-        do_3D=False,
-        stitch_threshold=0.0,
-    ):
+        x: ndarray,
+        compute_masks: bool = True,
+        normalize: bool = True,
+        invert: bool = False,
+        rescale: Union[float32, float64] = 1.0,
+        net_avg: bool = False,
+        resample: bool = True,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        cellprob_threshold: Union[float, int] = 0.0,
+        flow_threshold: float = 0.4,
+        min_size: int = 15,
+        interp: bool = True,
+        anisotropy: None = 1.0,
+        do_3D: bool = False,
+        stitch_threshold: float = 0.0,
+    ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
 
         tic = time.time()
         shape = x.shape
@@ -1041,7 +1060,13 @@ class SizeModel:
 
     """
 
-    def __init__(self, cp_model, device=None, pretrained_size=None, **kwargs):
+    def __init__(
+        self,
+        cp_model: CellposeModel,
+        device: Optional[torch.device] = None,
+        pretrained_size: Optional[str] = None,
+        **kwargs,
+    ) -> None:
         super(SizeModel, self).__init__(**kwargs)
 
         self.pretrained_size = pretrained_size
@@ -1061,17 +1086,17 @@ class SizeModel:
 
     def eval(
         self,
-        x,
-        channels=None,
-        channel_axis=None,
-        normalize=True,
-        invert=False,
-        augment=False,
-        tile=True,
-        batch_size=8,
-        progress=None,
-        interp=True,
-    ):
+        x: ndarray,
+        channels: Optional[List[int]] = None,
+        channel_axis: None = None,
+        normalize: bool = True,
+        invert: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        batch_size: int = 8,
+        progress: None = None,
+        interp: bool = True,
+    ) -> Tuple[float64, float64]:
         """use images x to produce style or use style input to predict size of objects in image
 
         Object size estimation is done in two steps:
@@ -1198,7 +1223,7 @@ class SizeModel:
         diam = self.diam_mean if (diam == 0 or np.isnan(diam)) else diam
         return diam, diam_style
 
-    def _size_estimation(self, style):
+    def _size_estimation(self, style: ndarray) -> float64:
         """linear regression from style to size
 
         sizes were estimated using "diameters" from square estimates not circles;

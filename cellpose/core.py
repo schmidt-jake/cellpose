@@ -7,10 +7,13 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 import cv2
 import fastremap
+from numpy import float64
+from numpy import ndarray
 import numpy as np
 from scipy.stats import mode
 import torch
@@ -84,7 +87,9 @@ def _use_gpu_torch(gpu_number=0):
         return False
 
 
-def assign_device(use_torch=True, gpu=False, device=0):
+def assign_device(
+    use_torch: bool = True, gpu: bool = False, device: int = 0
+) -> Tuple[torch.device, bool]:
     if gpu and use_gpu(use_torch=True):
         device = torch.device(f"cuda:{device}")
         gpu = True
@@ -96,7 +101,7 @@ def assign_device(use_torch=True, gpu=False, device=0):
     return device, gpu
 
 
-def check_mkl(use_torch=True):
+def check_mkl(use_torch: bool = True) -> bool:
     # core_logger.info('Running test snippet to check if MKL-DNN working')
     mkl_enabled = torch.backends.mkldnn.is_available()
     if mkl_enabled:
@@ -115,17 +120,17 @@ def check_mkl(use_torch=True):
 class UnetModel:
     def __init__(
         self,
-        gpu=False,
-        pretrained_model=False,
-        diam_mean=30.0,
-        net_avg=False,
-        device=None,
-        residual_on=False,
-        style_on=False,
-        concatenation=True,
-        nclasses=3,
-        nchan=2,
-    ):
+        gpu: bool = False,
+        pretrained_model: bool = False,
+        diam_mean: float = 30.0,
+        net_avg: bool = False,
+        device: Optional[torch.device] = None,
+        residual_on: bool = False,
+        style_on: bool = False,
+        concatenation: bool = True,
+        nclasses: int = 3,
+        nchan: int = 2,
+    ) -> None:
         self.unet = True
         self.torch = True
         self.mkldnn = None
@@ -361,15 +366,15 @@ class UnetModel:
 
         return masks, flows, styles
 
-    def _to_device(self, x):
+    def _to_device(self, x: ndarray) -> torch.Tensor:
         X = torch.from_numpy(x).float().to(self.device)
         return X
 
-    def _from_device(self, X):
+    def _from_device(self, X: torch.Tensor) -> ndarray:
         x = X.detach().cpu().numpy()
         return x
 
-    def network(self, x, return_conv=False):
+    def network(self, x: ndarray, return_conv: bool = False) -> Tuple[ndarray, ndarray]:
         """convert imgs to torch and run network model and return numpy"""
         X = self._to_device(x)
         self.net.eval()
@@ -388,15 +393,15 @@ class UnetModel:
 
     def _run_nets(
         self,
-        img,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        bsize=224,
-        return_conv=False,
-        progress=None,
-    ):
+        img: ndarray,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        bsize: int = 224,
+        return_conv: bool = False,
+        progress: None = None,
+    ) -> Tuple[ndarray, ndarray]:
         """run network (if more than one, loop over networks and average results
 
         Parameters
@@ -465,13 +470,13 @@ class UnetModel:
 
     def _run_net(
         self,
-        imgs,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        bsize=224,
-        return_conv=False,
-    ):
+        imgs: ndarray,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        bsize: int = 224,
+        return_conv: bool = False,
+    ) -> Tuple[ndarray, ndarray]:
         """run network on image or stack of images
 
         (faster if augment is False)
@@ -551,8 +556,13 @@ class UnetModel:
         return y, style
 
     def _run_tiled(
-        self, imgi, augment=False, bsize=224, tile_overlap=0.1, return_conv=False
-    ):
+        self,
+        imgi: ndarray,
+        augment: bool = False,
+        bsize: int = 224,
+        tile_overlap: float = 0.1,
+        return_conv: bool = False,
+    ) -> Tuple[ndarray, ndarray]:
         """run network in tiles of size [bsize x bsize]
 
         First image is split into overlapping tiles of size [bsize x bsize].
@@ -670,16 +680,16 @@ class UnetModel:
 
     def _run_3D(
         self,
-        imgs,
-        rsz=1.0,
-        anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        bsize=224,
-        progress=None,
-    ):
+        imgs: ndarray,
+        rsz: float64 = 1.0,
+        anisotropy: None = None,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        bsize: int = 224,
+        progress: None = None,
+    ) -> Tuple[ndarray, ndarray]:
         """run network on stack of images
 
         (faster if augment is False)

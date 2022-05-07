@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
+from pathlib import PosixPath
 import shutil
 import sys
+from typing import List
 
 import pytest
 
@@ -9,7 +11,7 @@ from cellpose import utils
 
 
 @pytest.fixture()
-def image_names():
+def image_names() -> List[str]:
     image_names = [
         "gray_2D.png",
         "rgb_2D.png",
@@ -23,7 +25,7 @@ def image_names():
 
 
 @pytest.fixture()
-def data_dir(image_names):
+def data_dir(image_names: List[str]) -> PosixPath:
     cp_dir = Path.home().joinpath(".cellpose")
     cp_dir.mkdir(exist_ok=True)
     data_dir = cp_dir.joinpath("data")
