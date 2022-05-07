@@ -4,8 +4,6 @@ import shutil
 
 import pytest
 
-from cellpose import utils
-
 
 @pytest.fixture()
 def image_names():
@@ -23,6 +21,8 @@ def image_names():
 
 @pytest.fixture()
 def data_dir(image_names):
+    from cellpose.utils import download_url_to_file
+
     cp_dir = Path.home().joinpath(".cellpose")
     cp_dir.mkdir(exist_ok=True)
     data_dir = cp_dir.joinpath("data")
@@ -46,7 +46,7 @@ def data_dir(image_names):
             cached_file = str(data_dir_distributed.joinpath(image_name))
             ext = ".tif"
         if not os.path.exists(cached_file):
-            utils.download_url_to_file(url, cached_file)
+            download_url_to_file(url, cached_file)
 
         # check if mask downloaded (and clear potential previous test data)
         if i < 2:

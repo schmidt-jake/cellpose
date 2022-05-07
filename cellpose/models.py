@@ -2,8 +2,11 @@ import logging
 import os
 import pathlib
 import time
+from typing import List, Optional
 
 import numpy as np
+import numpy.typing as npt
+import torch
 from tqdm import trange
 
 from cellpose import dynamics
@@ -39,7 +42,7 @@ MODEL_NAMES = [
 ]
 
 
-def model_path(model_type, model_index, use_torch=True):
+def model_path(model_type: str, model_index: int) -> str:
     torch_str = "torch"
     if model_type == "cyto" or model_type == "cyto2" or model_type == "nuclei":
         basename = "%s%s_%d" % (model_type, torch_str, model_index)
@@ -48,13 +51,13 @@ def model_path(model_type, model_index, use_torch=True):
     return cache_model_path(basename)
 
 
-def size_model_path(model_type, use_torch=True):
+def size_model_path(model_type: str) -> str:
     torch_str = "torch"
     basename = "size_%s%s_0.npy" % (model_type, torch_str)
     return cache_model_path(basename)
 
 
-def cache_model_path(basename):
+def cache_model_path(basename: str) -> str:
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     url = f"{_MODEL_URL}/{basename}"
     cached_file = os.fspath(MODEL_DIR.joinpath(basename))
@@ -64,7 +67,7 @@ def cache_model_path(basename):
     return cached_file
 
 
-def get_user_models():
+def get_user_models() -> List[str]:
     model_list_path = os.fspath(MODEL_DIR.joinpath("gui_models.txt"))
     model_strings = []
     if os.path.exists(model_list_path):
@@ -75,7 +78,7 @@ def get_user_models():
     return model_strings
 
 
-class Cellpose:
+class Cellpose(object):
     """main model which combines SizeModel and CellposeModel
 
     Parameters
@@ -97,7 +100,13 @@ class Cellpose:
 
     """
 
-    def __init__(self, gpu=False, model_type="cyto", net_avg=False, device=None):
+    def __init__(
+        self,
+        gpu: bool = False,
+        model_type: str = "cyto",
+        net_avg: bool = False,
+        device: Optional[torch.device] = None,
+    ):
         super(Cellpose, self).__init__()
         self.torch = True
 
@@ -123,7 +132,7 @@ class Cellpose:
         self.cp.model_type = model_type
 
         # size model not used for bacterial model
-        self.pretrained_size = size_model_path(model_type, self.torch)
+        self.pretrained_size = size_model_path(model_type)
         self.sz = SizeModel(
             device=self.device, pretrained_size=self.pretrained_size, cp_model=self.cp
         )
@@ -131,29 +140,29 @@ class Cellpose:
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channel_axis=None,
-        z_axis=None,
-        invert=False,
-        normalize=True,
-        diameter=30.0,
-        do_3D=False,
-        anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        resample=True,
-        interp=True,
-        flow_threshold=0.4,
-        cellprob_threshold=0.0,
-        min_size=15,
-        stitch_threshold=0.0,
-        rescale=None,
+        x: npt.NDArray,
+        batch_size: int = 8,
+        channels: List[int] = None,
+        channel_axis: int = None,
+        z_axis: int = None,
+        invert: bool = False,
+        normalize: bool = True,
+        diameter: float = 30.0,
+        do_3D: bool = False,
+        anisotropy: Optional[float] = None,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        resample: bool = True,
+        interp: bool = True,
+        flow_threshold: float = 0.4,
+        cellprob_threshold: float = 0.0,
+        min_size: int = 15,
+        stitch_threshold: float = 0.0,
+        rescale: Optional[float] = None,
         progress=None,
-        model_loaded=False,
+        model_loaded: bool = False,
     ):
         """run cellpose and get masks
 
@@ -378,16 +387,16 @@ class CellposeModel(UnetModel):
 
     def __init__(
         self,
-        gpu=False,
-        pretrained_model=False,
-        model_type=None,
-        net_avg=False,
-        diam_mean=30.0,
-        device=None,
-        residual_on=True,
-        style_on=True,
-        concatenation=False,
-        nchan=2,
+        gpu: bool = False,
+        pretrained_model: bool = False,
+        model_type: Optional[str] = None,
+        net_avg: bool = False,
+        diam_mean: float = 30.0,
+        device: Optional[torch.device] = None,
+        residual_on: bool = True,
+        style_on: bool = True,
+        concatenation: bool = False,
+        nchan: int = 2,
     ):
         self.torch = True
         if isinstance(pretrained_model, np.ndarray):
@@ -421,7 +430,7 @@ class CellposeModel(UnetModel):
 
             model_range = range(4) if net_avg else range(1)
             pretrained_model = [
-                model_path(pretrained_model_string, j, self.torch) for j in model_range
+                model_path(pretrained_model_string, j) for j in model_range
             ]
             residual_on, style_on, concatenation = True, True, False
 
@@ -468,31 +477,31 @@ class CellposeModel(UnetModel):
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channel_axis=None,
-        z_axis=None,
-        normalize=True,
-        invert=False,
-        rescale=None,
-        diameter=None,
-        do_3D=False,
+        x: npt.NDArray,
+        batch_size: int = 8,
+        channels: List[int] = None,
+        channel_axis: int = None,
+        z_axis: int = None,
+        normalize: bool = True,
+        invert: bool = False,
+        rescale: Optional[float] = None,
+        diameter: Optional[float] = None,
+        do_3D: bool = False,
         anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        resample=True,
-        interp=True,
-        flow_threshold=0.4,
-        cellprob_threshold=0.0,
-        compute_masks=True,
-        min_size=15,
-        stitch_threshold=0.0,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        resample: bool = True,
+        interp: bool = True,
+        flow_threshold: float = 0.4,
+        cellprob_threshold: float = 0.0,
+        compute_masks: bool = True,
+        min_size: int = 15,
+        stitch_threshold: float = 0.0,
         progress=None,
-        loop_run=False,
-        model_loaded=False,
+        loop_run: bool = False,
+        model_loaded: bool = False,
     ):
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
@@ -703,23 +712,23 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x,
-        compute_masks=True,
-        normalize=True,
-        invert=False,
-        rescale=1.0,
-        net_avg=False,
-        resample=True,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        cellprob_threshold=0.0,
-        flow_threshold=0.4,
-        min_size=15,
-        interp=True,
-        anisotropy=1.0,
-        do_3D=False,
-        stitch_threshold=0.0,
+        x: npt.NDArray,
+        compute_masks: bool = True,
+        normalize: bool = True,
+        invert: bool = False,
+        rescale: np.number = 1.0,  # type: ignore[assignment]
+        net_avg: bool = False,
+        resample: bool = True,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        cellprob_threshold: float = 0.0,
+        flow_threshold: float = 0.4,
+        min_size: int = 15,
+        interp: bool = True,
+        anisotropy: Optional[float] = 1.0,
+        do_3D: bool = False,
+        stitch_threshold: float = 0.0,
     ):
 
         tic = time.time()
