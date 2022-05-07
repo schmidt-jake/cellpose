@@ -46,7 +46,7 @@ def test_class_2D(data_dir, image_names):
     chan2 = [0]
     for m, model_type in enumerate(model_types):
         model = models.Cellpose(model_type=model_type)
-        masks, flows, _, _ = model.eval(
+        masks, flows, _, _ = model.my_eval(
             img,
             diameter=0,
             cellprob_threshold=0,

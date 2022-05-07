@@ -1,7 +1,6 @@
 import logging
 import os
 import pathlib
-import time
 from typing import Any, List, Optional, Tuple, Union
 
 from numpy import float32
@@ -9,7 +8,6 @@ from numpy import float64
 from numpy import ndarray
 import numpy as np
 import torch
-from tqdm import trange
 
 from cellpose import dynamics
 from cellpose import plot
@@ -18,8 +16,6 @@ from cellpose import utils
 from cellpose.core import assign_device
 from cellpose.core import parse_model_string
 from cellpose.core import UnetModel
-
-models_logger = logging.getLogger(__name__)
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")
@@ -64,7 +60,6 @@ def cache_model_path(basename: str) -> str:
     url = f"{_MODEL_URL}/{basename}"
     cached_file = os.fspath(MODEL_DIR.joinpath(basename))
     if not os.path.exists(cached_file):
-        models_logger.info('Downloading: "{}" to {}\n'.format(url, cached_file))
         utils.download_url_to_file(url, cached_file, progress=True)
     return cached_file
 
@@ -80,7 +75,7 @@ def get_user_models() -> List[Any]:
     return model_strings
 
 
-class Cellpose:
+class Cellpose(torch.nn.Module):
     """main model which combines SizeModel and CellposeModel
 
     Parameters
@@ -109,7 +104,7 @@ class Cellpose:
         net_avg: bool = False,
         device: None = None,
     ) -> None:
-        super(Cellpose, self).__init__()
+        super().__init__()
         self.torch = True
 
         # assign device (GPU or CPU)
@@ -140,7 +135,8 @@ class Cellpose:
         )
         self.sz.model_type = model_type
 
-    def eval(
+    @torch.jit.export
+    def my_eval(
         self,
         x: Union[ndarray, List[ndarray]],
         batch_size: int = 8,
@@ -265,10 +261,7 @@ class Cellpose:
             style vector summarizing each image, also used to estimate size of objects in image
 
         diams: list of diameters, or float (if do_3D=True)
-
         """
-
-        tic0 = time.time()
         channels = (
             [0, 0] if channels is None else channels
         )  # why not just make this a default in the function header?
@@ -281,9 +274,7 @@ class Cellpose:
             and not do_3D
             and x[0].ndim < 4
         ):
-            tic = time.time()
-            models_logger.info("~~~ ESTIMATING CELL DIAMETER(S) ~~~")
-            diams, _ = self.sz.eval(
+            diams, _ = self.sz.my_eval(
                 x,
                 channels=channels,
                 channel_axis=channel_axis,
@@ -295,28 +286,20 @@ class Cellpose:
             )
             rescale = self.diam_mean / np.array(diams)
             diameter = None
-            models_logger.info(
-                "estimated cell diameter(s) in %0.2f sec" % (time.time() - tic)
-            )
-            models_logger.info(">>> diameter(s) = ")
             if isinstance(diams, list) or isinstance(diams, np.ndarray):
                 diam_string = "[" + "".join(["%0.2f, " % d for d in diams]) + "]"
             else:
                 diam_string = "[ %0.2f ]" % diams
-            models_logger.info(diam_string)
         elif estimate_size:
             if self.pretrained_size is None:
                 reason = "no pretrained size model specified in model Cellpose"
             else:
                 reason = "does not work on non-2D images"
-            models_logger.warning(f"could not estimate diameter, {reason}")
             diams = self.diam_mean
         else:
             diams = diameter
 
-        tic = time.time()
-        models_logger.info("~~~ FINDING MASKS ~~~")
-        masks, flows, styles = self.cp.eval(
+        masks, flows, styles = self.cp.my_eval(
             x,
             batch_size=batch_size,
             invert=invert,
@@ -341,8 +324,6 @@ class Cellpose:
             stitch_threshold=stitch_threshold,
             model_loaded=model_loaded,
         )
-        models_logger.info(">>>> TOTAL TIME %0.2f sec" % (time.time() - tic0))
-
         return masks, flows, styles, diams
 
 
@@ -405,10 +386,10 @@ class CellposeModel(UnetModel):
         nchan: int = 2,
     ) -> None:
         self.torch = True
-        if isinstance(pretrained_model, np.ndarray):
-            pretrained_model = list(pretrained_model)
-        elif isinstance(pretrained_model, str):
-            pretrained_model = [pretrained_model]
+        # if isinstance(pretrained_model, np.ndarray):
+        #     pretrained_model = list(pretrained_model)
+        # elif isinstance(pretrained_model, str):
+        #     pretrained_model = [pretrained_model]
 
         self.diam_mean = diam_mean
         builtin = True
@@ -424,10 +405,6 @@ class CellposeModel(UnetModel):
                 builtin = False
             elif ~np.any([pretrained_model_string == s for s in all_models]):
                 pretrained_model_string = "cyto"
-
-            if pretrained_model and not os.path.exists(pretrained_model[0]):
-                models_logger.warning("pretrained model has incorrect path")
-            models_logger.info(f">> {pretrained_model_string} << model set to be used")
 
             if pretrained_model_string == "nuclei":
                 self.diam_mean = 17.0
@@ -447,7 +424,6 @@ class CellposeModel(UnetModel):
                 params = parse_model_string(pretrained_model_string)
                 if params is not None:
                     _, residual_on, style_on, concatenation = params
-                models_logger.info(f">>>> loading model {pretrained_model_string}")
 
         # initialize network
         super().__init__(
@@ -468,20 +444,14 @@ class CellposeModel(UnetModel):
             self.net.load_model(self.pretrained_model[0], cpu=(not self.gpu))
             self.diam_mean = self.net.diam_mean.data.cpu().numpy()[0]
             self.diam_labels = self.net.diam_labels.data.cpu().numpy()[0]
-            models_logger.info(
-                f">>>> model diam_mean = {self.diam_mean: .3f} (ROIs rescaled to this size during training)"
-            )
-            if not builtin:
-                models_logger.info(
-                    f">>>> model diam_labels = {self.diam_labels: .3f} (mean diameter of training ROIs)"
-                )
 
         ostr = ["off", "on"]
         self.net_type = "cellpose_residual_{}_style_{}_concatenation_{}".format(
             ostr[residual_on], ostr[style_on], ostr[concatenation]
         )
 
-    def eval(
+    @torch.jit.export
+    def my_eval(
         self,
         x: Union[ndarray, List[ndarray]],
         batch_size: int = 8,
@@ -620,11 +590,10 @@ class CellposeModel(UnetModel):
 
         if isinstance(x, list) or x.squeeze().ndim == 5:
             masks, styles, flows = [], [], []
-            tqdm_out = utils.TqdmToLogger(models_logger, level=logging.INFO)
             nimg = len(x)
-            iterator = trange(nimg, file=tqdm_out) if nimg > 1 else range(nimg)
+            iterator = range(nimg)
             for i in iterator:
-                maski, flowi, stylei = self.eval(
+                maski, flowi, stylei = self.my_eval(
                     x[i],
                     batch_size=batch_size,
                     channels=channels[i]
@@ -740,7 +709,6 @@ class CellposeModel(UnetModel):
         stitch_threshold: float = 0.0,
     ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
 
-        tic = time.time()
         shape = x.shape
         nimg = shape[0]
 
@@ -764,8 +732,7 @@ class CellposeModel(UnetModel):
             )  # (dZ, dY, dX)
             del yf
         else:
-            tqdm_out = utils.TqdmToLogger(models_logger, level=logging.INFO)
-            iterator = trange(nimg, file=tqdm_out) if nimg > 1 else range(nimg)
+            iterator = range(nimg)
             styles = np.zeros((nimg, self.nbase[-1]), np.float32)
             if resample:
                 dP = np.zeros((2, nimg, shape[1], shape[2]), np.float32)
@@ -806,12 +773,7 @@ class CellposeModel(UnetModel):
             del yf, style
         styles = styles.squeeze()
 
-        net_time = time.time() - tic
-        if nimg > 1:
-            models_logger.info("network run in %2.2fs" % (net_time))
-
         if compute_masks:
-            tic = time.time()
             niter = 200 if (do_3D and not resample) else (1 / rescale * 200)
             if do_3D:
                 masks, p = dynamics.compute_masks(
@@ -849,14 +811,8 @@ class CellposeModel(UnetModel):
                 p = np.array(p)
 
                 if stitch_threshold > 0 and nimg > 1:
-                    models_logger.info(
-                        f"stitching {nimg} planes using stitch_threshold={stitch_threshold:0.3f} to make 3D masks"
-                    )
                     masks = utils.stitch3D(masks, stitch_threshold=stitch_threshold)
 
-            flow_time = time.time() - tic
-            if nimg > 1:
-                models_logger.info("masks created in %2.2fs" % (flow_time))
             masks, dP, cellprob, p = (
                 masks.squeeze(),
                 dP.squeeze(),
@@ -1028,7 +984,7 @@ class CellposeModel(UnetModel):
         return model_path
 
 
-class SizeModel:
+class SizeModel(torch.nn.Module):
     """linear regression model for determining the size of objects in image
     used to rescale before input to cp_model
     uses styles from cp_model
@@ -1056,7 +1012,7 @@ class SizeModel:
         pretrained_size: Optional[str] = None,
         **kwargs,
     ) -> None:
-        super(SizeModel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self.pretrained_size = pretrained_size
         self.cp = cp_model
@@ -1073,7 +1029,8 @@ class SizeModel:
             models_logger.critical(error_message)
             raise ValueError(error_message)
 
-    def eval(
+    @torch.jit.export
+    def my_eval(
         self,
         x: ndarray,
         channels: Optional[List[int]] = None,
@@ -1141,7 +1098,7 @@ class SizeModel:
             tqdm_out = utils.TqdmToLogger(models_logger, level=logging.INFO)
             iterator = trange(nimg, file=tqdm_out) if nimg > 1 else range(nimg)
             for i in iterator:
-                diam, diam_style = self.eval(
+                diam, diam_style = self.my_eval(
                     x[i],
                     channels=channels[i]
                     if (
@@ -1171,7 +1128,7 @@ class SizeModel:
             models_logger.warning("image is not 2D cannot compute diameter")
             return self.diam_mean, self.diam_mean
 
-        styles = self.cp.eval(
+        styles = self.cp.my_eval(
             x,
             channels=channels,
             channel_axis=channel_axis,
@@ -1190,7 +1147,7 @@ class SizeModel:
             self.diam_mean if (diam_style == 0 or np.isnan(diam_style)) else diam_style
         )
 
-        masks = self.cp.eval(
+        masks = self.cp.my_eval(
             x,
             compute_masks=True,
             channels=channels,
