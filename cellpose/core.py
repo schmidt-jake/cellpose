@@ -9,6 +9,7 @@ import fastremap
 from numpy import float64
 from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 from scipy.stats import mode
 import torch
 from torch import nn
@@ -356,7 +357,7 @@ class UnetModel:
 
         return masks, flows, styles
 
-    def _to_device(self, x: ndarray) -> torch.Tensor:
+    def _to_device(self, x: npt.NDArray) -> torch.Tensor:
         X = torch.from_numpy(x).float().to(self.device)
         return X
 
@@ -364,7 +365,9 @@ class UnetModel:
         x = X.detach().cpu().numpy()
         return x
 
-    def network(self, x: ndarray, return_conv: bool = False) -> Tuple[ndarray, ndarray]:
+    def network(
+        self, x: npt.NDArray, return_conv: bool = False
+    ) -> Tuple[ndarray, ndarray]:
         """convert imgs to torch and run network model and return numpy"""
         X = self._to_device(x)
         self.net.eval()
@@ -383,7 +386,7 @@ class UnetModel:
 
     def _run_nets(
         self,
-        img: ndarray,
+        img: npt.NDArray,
         net_avg: bool = False,
         augment: bool = False,
         tile: bool = True,
@@ -460,7 +463,7 @@ class UnetModel:
 
     def _run_net(
         self,
-        imgs: ndarray,
+        imgs: npt.NDArray,
         augment: bool = False,
         tile: bool = True,
         tile_overlap: float = 0.1,
@@ -547,7 +550,7 @@ class UnetModel:
 
     def _run_tiled(
         self,
-        imgi: ndarray,
+        imgi: npt.NDArray,
         augment: bool = False,
         bsize: int = 224,
         tile_overlap: float = 0.1,
@@ -670,7 +673,7 @@ class UnetModel:
 
     def _run_3D(
         self,
-        imgs: ndarray,
+        imgs: npt.NDArray,
         rsz: float64 = 1.0,
         anisotropy: None = None,
         net_avg: bool = False,

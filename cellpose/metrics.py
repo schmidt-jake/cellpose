@@ -4,6 +4,7 @@ from numba import jit
 from numpy import int64
 from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 from scipy.ndimage import convolve
 from scipy.ndimage import mean
 from scipy.optimize import linear_sum_assignment
@@ -80,7 +81,9 @@ def aggregated_jaccard_index(masks_true, masks_pred):
 
 
 def average_precision(
-    masks_true: ndarray, masks_pred: ndarray, threshold: List[float] = [0.5, 0.75, 0.9]
+    masks_true: npt.NDArray,
+    masks_pred: npt.NDArray,
+    threshold: List[float] = [0.5, 0.75, 0.9],
 ) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
     """average precision estimation: AP = TP / (TP + FP + FN)
 
@@ -180,7 +183,9 @@ def _label_overlap(x, y):
     return overlap
 
 
-def _intersection_over_union(masks_true: ndarray, masks_pred: ndarray) -> ndarray:
+def _intersection_over_union(
+    masks_true: npt.NDArray, masks_pred: npt.NDArray
+) -> ndarray:
     """intersection over union of all mask pairs
 
     Parameters
@@ -222,7 +227,7 @@ def _intersection_over_union(masks_true: ndarray, masks_pred: ndarray) -> ndarra
     return iou
 
 
-def _true_positive(iou: ndarray, th: float) -> int64:
+def _true_positive(iou: npt.NDArray, th: float) -> int64:
     """true positive at threshold th
 
     Parameters
@@ -263,8 +268,8 @@ def _true_positive(iou: ndarray, th: float) -> int64:
 
 
 def flow_error(
-    maski: ndarray,
-    dP_net: ndarray,
+    maski: npt.NDArray,
+    dP_net: npt.NDArray,
     use_gpu: bool = False,
     device: Optional[device] = None,
 ) -> Tuple[ndarray, ndarray]:

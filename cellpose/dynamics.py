@@ -9,6 +9,7 @@ from numpy import float64
 from numpy import ndarray
 from numpy import uint32
 import numpy as np
+import numpy.typing as npt
 import scipy.ndimage
 from scipy.ndimage import maximum_filter1d
 import tifffile
@@ -179,7 +180,7 @@ def masks_to_flows_gpu(masks, device=None):
 
 
 def masks_to_flows_cpu(
-    masks: ndarray, device: Optional[torch.device] = None
+    masks: npt.NDArray, device: Optional[torch.device] = None
 ) -> Tuple[ndarray, ndarray]:
     """convert masks to flows using diffusion from center pixel
     Center of masks where diffusion starts is defined to be the
@@ -239,7 +240,7 @@ def masks_to_flows_cpu(
 
 
 def masks_to_flows(
-    masks: ndarray, use_gpu: bool = False, device: Optional[torch.device] = None
+    masks: npt.NDArray, use_gpu: bool = False, device: Optional[torch.device] = None
 ) -> ndarray:
     """convert masks to flows using diffusion from center pixel
 
@@ -398,8 +399,8 @@ def map_coordinates(I, yc, xc, Y):
 
 
 def steps2D_interp(
-    p: ndarray,
-    dP: ndarray,
+    p: npt.NDArray,
+    dP: npt.NDArray,
     niter: uint32,
     use_gpu: bool = False,
     device: Optional[torch.device] = None,
@@ -537,7 +538,7 @@ def steps2D(p, dP, inds, niter):
 
 
 def follow_flows(
-    dP: ndarray,
+    dP: npt.NDArray,
     mask: None = None,
     niter: float64 = 200,
     interp: bool = True,
@@ -611,8 +612,8 @@ def follow_flows(
 
 
 def remove_bad_flow_masks(
-    masks: ndarray,
-    flows: ndarray,
+    masks: npt.NDArray,
+    flows: npt.NDArray,
     threshold: float = 0.4,
     use_gpu: bool = False,
     device: Optional[torch.device] = None,
@@ -651,7 +652,9 @@ def remove_bad_flow_masks(
     return masks
 
 
-def get_masks(p: ndarray, iscell: Optional[ndarray] = None, rpad: int = 20) -> ndarray:
+def get_masks(
+    p: npt.NDArray, iscell: Optional[ndarray] = None, rpad: int = 20
+) -> ndarray:
     """create masks using pixel convergence after running dynamics
 
     Makes a histogram of final pixel locations p, initializes masks
@@ -769,8 +772,8 @@ def get_masks(p: ndarray, iscell: Optional[ndarray] = None, rpad: int = 20) -> n
 
 
 def compute_masks(
-    dP: ndarray,
-    cellprob: ndarray,
+    dP: npt.NDArray,
+    cellprob: npt.NDArray,
     p: None = None,
     niter: float64 = 200,
     cellprob_threshold: float = 0.0,

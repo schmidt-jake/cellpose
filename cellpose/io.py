@@ -13,6 +13,7 @@ from natsort import natsorted
 from numpy import float32
 from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 import tifffile
 from tqdm import tqdm
 
@@ -124,7 +125,7 @@ def imread(filename: str) -> ndarray:
             return None
 
 
-def imsave(filename: str, arr: ndarray) -> None:
+def imsave(filename: str, arr: npt.NDArray) -> None:
     ext = os.path.splitext(filename)[-1]
     if ext == ".tif" or ext == ".tiff":
         tifffile.imsave(filename, arr)

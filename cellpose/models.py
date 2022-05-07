@@ -7,6 +7,7 @@ from numpy import float32
 from numpy import float64
 from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 import torch
 
 from cellpose import dynamics
@@ -142,12 +143,12 @@ class Cellpose(torch.nn.Module):
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
         channel_axis: Optional[int] = None,
-        z_axis: None = None,
+        z_axis: Optional[int] = None,
         invert: bool = False,
         normalize: bool = True,
-        diameter: None = 30.0,
+        diameter: Optional[float] = 30.0,
         do_3D: bool = False,
-        anisotropy: None = None,
+        anisotropy: Optional[float] = None,
         net_avg: bool = False,
         augment: bool = False,
         tile: bool = True,
@@ -158,8 +159,8 @@ class Cellpose(torch.nn.Module):
         cellprob_threshold: float = 0.0,
         min_size: int = 15,
         stitch_threshold: float = 0.0,
-        rescale: None = None,
-        progress: None = None,
+        rescale: Optional[float] = None,
+        progress=None,
         model_loaded: bool = False,
     ) -> Tuple[ndarray, List[ndarray], ndarray, float64]:
         """run cellpose and get masks
@@ -453,11 +454,11 @@ class CellposeModel(UnetModel):
         batch_size: int = 8,
         channels: Optional[List[int]] = None,
         channel_axis: Optional[int] = None,
-        z_axis: None = None,
+        z_axis: Optional[int] = None,
         normalize: bool = True,
         invert: bool = False,
         rescale: Optional[float64] = None,
-        diameter: None = None,
+        diameter: Optional[float] = None,
         do_3D: bool = False,
         anisotropy: None = None,
         net_avg: bool = False,
@@ -683,7 +684,7 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x: ndarray,
+        x: npt.NDArray,
         compute_masks: bool = True,
         normalize: bool = True,
         invert: bool = False,
@@ -697,7 +698,7 @@ class CellposeModel(UnetModel):
         flow_threshold: float = 0.4,
         min_size: int = 15,
         interp: bool = True,
-        anisotropy: None = 1.0,
+        anisotropy: Optional[float] = 1.0,
         do_3D: bool = False,
         stitch_threshold: float = 0.0,
     ) -> Tuple[ndarray, ndarray, ndarray, ndarray, ndarray]:
@@ -1160,7 +1161,7 @@ class SizeModel(torch.nn.Module):
         diam = self.diam_mean if (diam == 0 or np.isnan(diam)) else diam
         return diam, diam_style
 
-    def _size_estimation(self, style: ndarray) -> float64:
+    def _size_estimation(self, style: npt.NDArray) -> float64:
         """linear regression from style to size
 
         sizes were estimated using "diameters" from square estimates not circles;

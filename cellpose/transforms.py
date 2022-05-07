@@ -7,6 +7,7 @@ from numpy import float64
 from numpy import int64
 from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 import torch
 
 transforms_logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ def unaugment_tiles(y, unet=False):
 
 
 def average_tiles(
-    y: ndarray, ysub: List[List[int64]], xsub: List[List[int64]], Ly: int, Lx: int
+    y: npt.NDArray, ysub: List[List[int64]], xsub: List[List[int64]], Ly: int, Lx: int
 ) -> ndarray:
     """average results of network over tiles
 
@@ -105,7 +106,10 @@ def average_tiles(
 
 
 def make_tiles(
-    imgi: ndarray, bsize: int = 224, augment: bool = False, tile_overlap: float = 0.1
+    imgi: npt.NDArray,
+    bsize: int = 224,
+    augment: bool = False,
+    tile_overlap: float = 0.1,
 ) -> Tuple[ndarray, List[List[int64]], List[List[int64]], int, int]:
     """make tiles of image to run at test-time
 
@@ -203,7 +207,7 @@ def make_tiles(
     return IMG, ysub, xsub, Ly, Lx
 
 
-def normalize99(Y: ndarray, lower: int = 1, upper: int = 99) -> ndarray:
+def normalize99(Y: npt.NDArray, lower: int = 1, upper: int = 99) -> ndarray:
     """normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile"""
     X = Y.copy()
     x01 = np.percentile(X, lower)
@@ -230,7 +234,7 @@ def move_axis(img: torch.Tensor, m_axis: int = -1, first: bool = True) -> torch.
 
 # This was edited to fix a bug where single-channel images of shape (y,x) would be
 # transposed to (x,y) if x<y, making the labels no longer correspond to the data.
-def move_min_dim(img: ndarray, force: bool = False) -> ndarray:
+def move_min_dim(img: npt.NDArray, force: bool = False) -> ndarray:
     """move minimum dimension last as channels if < 10, or force==True"""
     if (
         len(img.shape) > 2
@@ -412,7 +416,7 @@ def reshape(
     return data
 
 
-def normalize_img(img: ndarray, axis: int = -1, invert: bool = False) -> ndarray:
+def normalize_img(img: npt.NDArray, axis: int = -1, invert: bool = False) -> ndarray:
     """normalize each channel of the image so that so that 0.0=1st percentile
     and 1.0=99th percentile of image intensities
 
@@ -565,7 +569,7 @@ def reshape_and_normalize_data(
 
 
 def resize_image(
-    img0: ndarray,
+    img0: npt.NDArray,
     Ly: Optional[int] = None,
     Lx: Optional[int] = None,
     rsz: Optional[float64] = None,
@@ -627,7 +631,7 @@ def resize_image(
 
 
 def pad_image_ND(
-    img0: ndarray, div: int = 16, extra: int = 1
+    img0: npt.NDArray, div: int = 16, extra: int = 1
 ) -> Tuple[ndarray, ndarray, ndarray]:
     """pad image for test-time so that its dimensions are a multiple of 16 (2D or 3D)
 

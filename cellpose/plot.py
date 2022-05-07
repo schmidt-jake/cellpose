@@ -2,6 +2,7 @@ import os
 
 from numpy import ndarray
 import numpy as np
+import numpy.typing as npt
 from scipy.ndimage import gaussian_filter
 
 from cellpose import io
@@ -24,7 +25,9 @@ except:
     SKIMAGE_ENABLED = False
 
 # modified to use sinebow color
-def dx_to_circ(dP: ndarray, transparency: bool = False, mask: None = None) -> ndarray:
+def dx_to_circ(
+    dP: npt.NDArray, transparency: bool = False, mask: None = None
+) -> ndarray:
     """dP is 2 x Y x X => 'optic' flow representation
 
     Parameters
