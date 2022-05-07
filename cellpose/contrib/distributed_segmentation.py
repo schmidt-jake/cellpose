@@ -14,14 +14,18 @@ import dask
 import dask.array as da
 import numpy as np
 
+
 class DistSegError(Exception):
     """Error in image segmentation."""
+
 
 try:
     from dask_image.ndmeasure._utils import _label
     from sklearn import metrics as sk_metrics
 except ModuleNotFoundError as e:
-    raise DistSegError("Install 'cellpose[distributed]' for distributed segmentation dependencies") from e
+    raise DistSegError(
+        "Install 'cellpose[distributed]' for distributed segmentation dependencies"
+    ) from e
 
 
 logger = logging.getLogger(__name__)
