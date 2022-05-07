@@ -41,7 +41,7 @@ MODEL_NAMES = [
 ]
 
 
-def model_path(model_type, model_index, use_torch=True):
+def model_path(model_type: str, model_index: int) -> str:
     torch_str = "torch"
     if model_type == "cyto" or model_type == "cyto2" or model_type == "nuclei":
         basename = "%s%s_%d" % (model_type, torch_str, model_index)
@@ -50,13 +50,13 @@ def model_path(model_type, model_index, use_torch=True):
     return cache_model_path(basename)
 
 
-def size_model_path(model_type, use_torch=True):
+def size_model_path(model_type: str) -> str:
     torch_str = "torch"
     basename = "size_%s%s_0.npy" % (model_type, torch_str)
     return cache_model_path(basename)
 
 
-def cache_model_path(basename):
+def cache_model_path(basename: str) -> str:
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     url = f"{_MODEL_URL}/{basename}"
     cached_file = os.fspath(MODEL_DIR.joinpath(basename))
@@ -66,7 +66,7 @@ def cache_model_path(basename):
     return cached_file
 
 
-def get_user_models():
+def get_user_models() -> List[str]:
     model_list_path = os.fspath(MODEL_DIR.joinpath("gui_models.txt"))
     model_strings = []
     if os.path.exists(model_list_path):
@@ -77,7 +77,7 @@ def get_user_models():
     return model_strings
 
 
-class Cellpose:
+class Cellpose(object):
     """main model which combines SizeModel and CellposeModel
 
     Parameters
@@ -131,7 +131,7 @@ class Cellpose:
         self.cp.model_type = model_type
 
         # size model not used for bacterial model
-        self.pretrained_size = size_model_path(model_type, self.torch)
+        self.pretrained_size = size_model_path(model_type)
         self.sz = SizeModel(
             pretrained_size=self.pretrained_size,
             cp_model=self.cp,
@@ -389,7 +389,7 @@ class CellposeModel(UnetModel):
         self,
         gpu: bool = False,
         pretrained_model: bool = False,
-        model_type: str = None,
+        model_type: Optional[str] = None,
         net_avg: bool = False,
         diam_mean: float = 30.0,
         device: Optional[torch.device] = None,
@@ -430,7 +430,7 @@ class CellposeModel(UnetModel):
 
             model_range = range(4) if net_avg else range(1)
             pretrained_model = [
-                model_path(pretrained_model_string, j, self.torch) for j in model_range
+                model_path(pretrained_model_string, j) for j in model_range
             ]
             residual_on, style_on, concatenation = True, True, False
 
@@ -479,18 +479,18 @@ class CellposeModel(UnetModel):
         x: torch.Tensor,
         batch_size: int = 8,
         channels: List[int] = None,
-        channel_axis: Optional[int] = None,
-        z_axis: Optional[int] = None,
+        channel_axis: int = None,
+        z_axis: int = None,
         normalize: bool = True,
         invert: bool = False,
-        rescale=None,
-        diameter=None,
+        rescale: Optional[float] = None,
+        diameter: Optional[float] = None,
         do_3D: bool = False,
         anisotropy=None,
         net_avg: bool = False,
         augment: bool = False,
         tile: bool = True,
-        tile_overlap=0.1,
+        tile_overlap: float = 0.1,
         resample: bool = True,
         interp: bool = True,
         flow_threshold: float = 0.4,
@@ -718,7 +718,7 @@ class CellposeModel(UnetModel):
         compute_masks: bool = True,
         normalize: bool = True,
         invert: bool = False,
-        rescale: float = 1.0,
+        rescale: np.number = 1.0,  # type: ignore[assignment]
         net_avg: bool = False,
         resample: bool = True,
         augment: bool = False,
