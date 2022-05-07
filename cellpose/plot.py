@@ -1,12 +1,11 @@
 import os
 
-import cv2
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
-from . import io
-from . import transforms
-from . import utils
+from cellpose import io
+from cellpose import transforms
+from cellpose import utils
 
 try:
     import matplotlib

@@ -1,6 +1,4 @@
 import os
-from pathlib import Path
-import shutil
 from subprocess import check_output
 from subprocess import STDOUT
 

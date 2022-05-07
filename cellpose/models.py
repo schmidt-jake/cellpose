@@ -6,15 +6,15 @@ import time
 import numpy as np
 from tqdm import trange
 
-models_logger = logging.getLogger(__name__)
+from cellpose import dynamics
+from cellpose import plot
+from cellpose import transforms
+from cellpose import utils
+from cellpose.core import assign_device
+from cellpose.core import parse_model_string
+from cellpose.core import UnetModel
 
-from . import dynamics
-from . import plot
-from . import transforms
-from . import utils
-from .core import assign_device
-from .core import parse_model_string
-from .core import UnetModel
+models_logger = logging.getLogger(__name__)
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")

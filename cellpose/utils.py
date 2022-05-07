@@ -1,15 +1,9 @@
 import colorsys
-import datetime
 import io
 import os
-import pathlib
 import shutil
-import subprocess
 import tempfile
-import time
-from urllib.parse import urlparse
 from urllib.request import urlopen
-import warnings
 
 import cv2
 import numpy as np
@@ -18,12 +12,10 @@ from scipy.ndimage import find_objects
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import generate_binary_structure
 from scipy.ndimage import label
-from scipy.ndimage import maximum_filter1d
 from scipy.spatial import ConvexHull
-from scipy.stats import gmean
 from tqdm import tqdm
 
-from . import metrics
+from cellpose import metrics
 
 try:
     from skimage.morphology import remove_small_holes
