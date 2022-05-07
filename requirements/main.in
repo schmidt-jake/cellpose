@@ -6,4 +6,5 @@ opencv-python
 tifffile
 torch
 tqdm
+scikit-image
 scipy
