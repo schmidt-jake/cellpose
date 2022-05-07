@@ -4,15 +4,18 @@ from typing import List, Optional, Tuple
 
 import cv2
 import fastremap
+from numba import njit
 import numpy as np
 import scipy.ndimage
+from scipy.ndimage import maximum_filter1d
+from scipy.ndimage.filters import maximum_filter1d
 import tifffile
 import torch
-from numba import njit
-from scipy.ndimage import maximum_filter1d
 from tqdm import trange
 
-from cellpose import metrics, transforms, utils
+from cellpose import metrics
+from cellpose import transforms
+from cellpose import utils
 
 dynamics_logger = logging.getLogger(__name__)
 

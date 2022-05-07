@@ -24,24 +24,27 @@ if __name__ == "__main__":
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-import os, sys, datetime, glob, pdb
-import numpy as np
+import datetime
+import glob
+import os
+import pdb
+import sys
 
+from imgaug import augmenters as iaa
+import numpy as np
 # np.random.bit_generator = np.random._bit_generator
 import skimage.io
-from imgaug import augmenters as iaa
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("/groups/pachitariu/pachitariulab/code/github/Mask_RCNN")
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
-from mrcnn.config import Config
-from mrcnn import utils
-from mrcnn import model as modellib
-from mrcnn import visualize
 import matplotlib.pyplot as plt
-
+from mrcnn import model as modellib
+from mrcnn import utils
+from mrcnn import visualize
+from mrcnn.config import Config
 from stardist import matching
 
 # Path to trained weights file

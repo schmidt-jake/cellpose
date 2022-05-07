@@ -1,7 +1,9 @@
-import pytest
 import numpy as np
+import pytest
 import torch
-from cellpose import io, models
+
+from cellpose import io
+from cellpose import models
 from cellpose.contrib import openvino_utils
 
 

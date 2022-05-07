@@ -1,6 +1,6 @@
 import logging
-import warnings
 from typing import List, Optional, Tuple
+import warnings
 
 import cv2
 import numpy as np

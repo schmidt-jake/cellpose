@@ -1,23 +1,21 @@
-import os, warnings, time, tempfile, datetime, pathlib, shutil, subprocess
-from tqdm import tqdm
-from urllib.request import urlopen
-from urllib.parse import urlparse
-import cv2
-from scipy.ndimage import (
-    find_objects,
-    gaussian_filter,
-    generate_binary_structure,
-    label,
-    maximum_filter1d,
-    binary_fill_holes,
-)
-from scipy.spatial import ConvexHull
-from scipy.stats import gmean
-import numpy as np
 import colorsys
 import io
+import os
+import shutil
+import tempfile
+from urllib.request import urlopen
 
-from . import metrics
+import cv2
+import numpy as np
+from scipy.ndimage import binary_fill_holes
+from scipy.ndimage import find_objects
+from scipy.ndimage import gaussian_filter
+from scipy.ndimage import generate_binary_structure
+from scipy.ndimage import label
+from scipy.spatial import ConvexHull
+from tqdm import tqdm
+
+from cellpose import metrics
 
 try:
     from skimage.morphology import remove_small_holes

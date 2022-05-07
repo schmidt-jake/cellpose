@@ -1,8 +1,8 @@
-import os, sys
+import os
+
+import numpy as np
 
 os.environ["MKLDNN_VERBOSE"] = "1"
-import numpy as np
-import time
 
 try:
     import mxnet as mx

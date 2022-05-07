@@ -1,8 +1,6 @@
-from cellpose import io, models, metrics, plot
-from pathlib import Path
-from subprocess import check_output, STDOUT
-import os, shutil
 import numpy as np
+
+from cellpose import models
 
 
 def test_shape_2D():

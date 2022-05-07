@@ -1,8 +1,10 @@
-from cellpose import io, models, metrics, plot
-from pathlib import Path
-from subprocess import check_output, STDOUT
-import os, shutil
-from glob import glob
+import os
+import shutil
+from subprocess import check_output
+from subprocess import STDOUT
+
+from cellpose import io
+from cellpose import models
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 

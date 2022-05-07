@@ -6,13 +6,18 @@ from typing import Tuple
 
 import cv2
 import fastremap
-import torch
+import numpy as np
 from scipy.stats import mode
+import torch
 from torch import nn
 from torch.utils import mkldnn as mkldnn_utils
-from tqdm import tqdm, trange
+from tqdm import tqdm
+from tqdm import trange
 
-from cellpose import metrics, resnet_torch, transforms, utils
+from cellpose import metrics
+from cellpose import resnet_torch
+from cellpose import transforms
+from cellpose import utils
 
 TORCH_ENABLED = True
 

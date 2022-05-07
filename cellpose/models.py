@@ -8,8 +8,13 @@ import numpy as np
 import torch
 from tqdm import trange
 
-from cellpose import dynamics, plot, transforms, utils
-from cellpose.core import UnetModel, assign_device, parse_model_string
+from cellpose import dynamics
+from cellpose import plot
+from cellpose import transforms
+from cellpose import utils
+from cellpose.core import assign_device
+from cellpose.core import parse_model_string
+from cellpose.core import UnetModel
 
 models_logger = logging.getLogger(__name__)
 

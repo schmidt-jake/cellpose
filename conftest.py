@@ -1,8 +1,10 @@
 import os
-import shutil
 from pathlib import Path
+import shutil
 
 import pytest
+
+from cellpose import utils
 
 
 @pytest.fixture()

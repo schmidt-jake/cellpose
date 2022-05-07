@@ -1,9 +1,14 @@
 import os
-from subprocess import STDOUT, check_output
+from subprocess import check_output
+from subprocess import STDOUT
 
 import numpy as np
 import torch
-from cellpose import io, metrics, models, plot
+
+from cellpose import io
+from cellpose import metrics
+from cellpose import models
+from cellpose import plot
 
 try:
     import matplotlib.pyplot as plt

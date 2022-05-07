@@ -1,10 +1,11 @@
 import os
 
-import numpy as np
-import torch
 from scipy.ndimage import gaussian_filter
+import torch
 
-from . import io, transforms, utils
+from cellpose import io
+from cellpose import transforms
+from cellpose import utils
 
 try:
     import matplotlib
