@@ -1,23 +1,20 @@
-import time, os
-from scipy.ndimage.filters import maximum_filter1d
-import torch
-import scipy.ndimage
-import numpy as np
-import tifffile
-from tqdm import trange
-from numba import njit, float32, int32, vectorize
+import logging
+import os
+from typing import List, Optional, Tuple
+
 import cv2
 import fastremap
+import numpy as np
+import scipy.ndimage
+import tifffile
+import torch
+from numba import njit
+from scipy.ndimage import maximum_filter1d
+from tqdm import trange
 
-import logging
+from cellpose import metrics, transforms, utils
 
 dynamics_logger = logging.getLogger(__name__)
-
-from . import utils, metrics, transforms
-
-import torch
-from torch import optim, nn
-from . import resnet_torch
 
 TORCH_ENABLED = True
 torch_GPU = torch.device("cuda")
@@ -744,24 +741,25 @@ def get_masks(p, iscell=None, rpad=20):
 
 
 def compute_masks(
-    dP,
-    cellprob,
+    dP: torch.Tensor,
+    cellprob: torch.Tensor,
     p=None,
-    niter=200,
-    cellprob_threshold=0.0,
-    flow_threshold=0.4,
-    interp=True,
-    do_3D=False,
-    min_size=15,
-    resize=None,
-    use_gpu=False,
-    device=None,
-):
+    niter: int = 200,
+    cellprob_threshold: float = 0.0,
+    flow_threshold: float = 0.4,
+    interp: bool = True,
+    do_3D: bool = False,
+    min_size: int = 15,
+    resize: Optional[List] = None,
+    use_gpu: bool = False,
+    device: torch.device = None,
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """compute masks using dynamics from dP, cellprob, and boundary"""
-
     cp_mask = cellprob > cellprob_threshold
 
-    if np.any(cp_mask):  # mask at this point is a cell cluster binary map, not labels
+    if (
+        cp_mask.any().item()
+    ):  # mask at this point is a cell cluster binary map, not labels
         # follow flows
         if p is None:
             p, inds = follow_flows(
@@ -774,8 +772,8 @@ def compute_masks(
             if inds is None:
                 dynamics_logger.info("No cell pixels found.")
                 shape = resize if resize is not None else cellprob.shape
-                mask = np.zeros(shape, np.uint16)
-                p = np.zeros((len(shape), *shape), np.uint16)
+                mask = torch.zeros(shape, dtype=torch.int32)
+                p = torch.zeros((len(shape), *shape), dtype=torch.int32)
                 return mask, p
 
         # calculate masks
@@ -824,5 +822,4 @@ def compute_masks(
         dynamics_logger.warning(
             "more than 65535 masks in image, masks returned as np.uint32"
         )
-
     return mask, p

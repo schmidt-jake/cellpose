@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
-import cv2
+import torch
 from scipy.ndimage import gaussian_filter
-from . import utils, io, transforms
+
+from . import io, transforms, utils
 
 try:
     import matplotlib
@@ -20,7 +22,7 @@ except:
     SKIMAGE_ENABLED = False
 
 # modified to use sinebow color
-def dx_to_circ(dP, transparency=False, mask=None):
+def dx_to_circ(dP: torch.Tensor, transparency=False, mask=None) -> torch.Tensor:
     """dP is 2 x Y x X => 'optic' flow representation
 
     Parameters
@@ -37,23 +39,24 @@ def dx_to_circ(dP, transparency=False, mask=None):
 
     """
 
-    dP = np.array(dP)
-    mag = np.clip(transforms.normalize99(np.sqrt(np.sum(dP**2, axis=0))), 0, 1.0)
-    angles = np.arctan2(dP[1], dP[0]) + np.pi
+    mag = torch.clip(
+        transforms.normalize99(torch.sqrt(torch.sum(dP**2, dim=0))), 0, 1.0
+    )
+    angles = torch.arctan2(dP[1], dP[0]) + torch.pi
     a = 2
-    r = (np.cos(angles) + 1) / a
-    g = (np.cos(angles + 2 * np.pi / 3) + 1) / a
-    b = (np.cos(angles + 4 * np.pi / 3) + 1) / a
+    r = (torch.cos(angles) + 1) / a
+    g = (torch.cos(angles + 2 * torch.pi / 3) + 1) / a
+    b = (torch.cos(angles + 4 * torch.pi / 3) + 1) / a
 
     if transparency:
-        im = np.stack((r, g, b, mag), axis=-1)
+        im = torch.stack((r, g, b, mag), dim=-1)
     else:
-        im = np.stack((r * mag, g * mag, b * mag), axis=-1)
+        im = torch.stack((r * mag, g * mag, b * mag), dim=-1)
 
     if mask is not None and transparency and dP.shape[0] < 3:
         im[:, :, -1] *= mask
 
-    im = (np.clip(im, 0, 1) * 255).astype(np.uint8)
+    im = (torch.clip(im, 0, 1) * 255).byte()
     return im
 
 
@@ -97,12 +100,12 @@ def show_segmentation(fig, img, maski, flowi, channels=[0, 0], file_name=None):
     img0 = img.copy()
 
     if img0.shape[0] < 4:
-        img0 = np.transpose(img0, (1, 2, 0))
+        img0 = torch.transpose(img0, (1, 2, 0))
     if img0.shape[-1] < 3 or img0.ndim < 3:
         img0 = image_to_rgb(img0, channels=channels)
     else:
         if img0.max() <= 50.0:
-            img0 = np.uint8(np.clip(img0 * 255, 0, 1))
+            img0 = torch.uint8(torch.clip(img0 * 255, 0, 1))
     ax.imshow(img0)
     ax.set_title("original image")
     ax.axis("off")
@@ -112,9 +115,9 @@ def show_segmentation(fig, img, maski, flowi, channels=[0, 0], file_name=None):
     overlay = mask_overlay(img0, maski)
 
     ax = fig.add_subplot(1, 4, 2)
-    outX, outY = np.nonzero(outlines)
+    outX, outY = torch.nonzero(outlines)
     imgout = img0.copy()
-    imgout[outX, outY] = np.array([255, 0, 0])  # pure red
+    imgout[outX, outY] = torch.array([255, 0, 0])  # pure red
 
     ax.imshow(imgout)
     ax.set_title("predicted outlines")
@@ -158,21 +161,21 @@ def mask_rgb(masks, colors=None):
     """
     if colors is not None:
         if colors.max() > 1:
-            colors = np.float32(colors)
+            colors = torch.float32(colors)
             colors /= 255
         colors = utils.rgb_to_hsv(colors)
 
-    HSV = np.zeros((masks.shape[0], masks.shape[1], 3), np.float32)
+    HSV = torch.zeros((masks.shape[0], masks.shape[1], 3), torch.float32)
     HSV[:, :, 2] = 1.0
     for n in range(int(masks.max())):
         ipix = (masks == n + 1).nonzero()
         if colors is None:
-            HSV[ipix[0], ipix[1], 0] = np.random.rand()
+            HSV[ipix[0], ipix[1], 0] = torch.random.rand()
         else:
             HSV[ipix[0], ipix[1], 0] = colors[n, 0]
-        HSV[ipix[0], ipix[1], 1] = np.random.rand() * 0.5 + 0.5
-        HSV[ipix[0], ipix[1], 2] = np.random.rand() * 0.5 + 0.5
-    RGB = (utils.hsv_to_rgb(HSV) * 255).astype(np.uint8)
+        HSV[ipix[0], ipix[1], 1] = torch.random.rand() * 0.5 + 0.5
+        HSV[ipix[0], ipix[1], 2] = torch.random.rand() * 0.5 + 0.5
+    RGB = (utils.hsv_to_rgb(HSV) * 255).astype(torch.uint8)
     return RGB
 
 
@@ -200,17 +203,17 @@ def mask_overlay(img, masks, colors=None):
     """
     if colors is not None:
         if colors.max() > 1:
-            colors = np.float32(colors)
+            colors = torch.float32(colors)
             colors /= 255
         colors = utils.rgb_to_hsv(colors)
     if img.ndim > 2:
-        img = img.astype(np.float32).mean(axis=-1)
+        img = img.astype(torch.float32).mean(axis=-1)
     else:
-        img = img.astype(np.float32)
+        img = img.astype(torch.float32)
 
-    HSV = np.zeros((img.shape[0], img.shape[1], 3), np.float32)
-    HSV[:, :, 2] = np.clip((img / 255.0 if img.max() > 1 else img) * 1.5, 0, 1)
-    hues = np.linspace(0, 1, masks.max() + 1)[np.random.permutation(masks.max())]
+    HSV = torch.zeros((img.shape[0], img.shape[1], 3), torch.float32)
+    HSV[:, :, 2] = torch.clip((img / 255.0 if img.max() > 1 else img) * 1.5, 0, 1)
+    hues = torch.linspace(0, 1, masks.max() + 1)[torch.random.permutation(masks.max())]
     for n in range(int(masks.max())):
         ipix = (masks == n + 1).nonzero()
         if colors is None:
@@ -218,29 +221,29 @@ def mask_overlay(img, masks, colors=None):
         else:
             HSV[ipix[0], ipix[1], 0] = colors[n, 0]
         HSV[ipix[0], ipix[1], 1] = 1.0
-    RGB = (utils.hsv_to_rgb(HSV) * 255).astype(np.uint8)
+    RGB = (utils.hsv_to_rgb(HSV) * 255).astype(torch.uint8)
     return RGB
 
 
 def image_to_rgb(img0, channels=[0, 0]):
     """image is 2 x Ly x Lx or Ly x Lx x 2 - change to RGB Ly x Lx x 3"""
     img = img0.copy()
-    img = img.astype(np.float32)
+    img = img.astype(torch.float32)
     if img.ndim < 3:
-        img = img[:, :, np.newaxis]
+        img = img[:, :, torch.newaxis]
     if img.shape[0] < 5:
-        img = np.transpose(img, (1, 2, 0))
+        img = torch.transpose(img, (1, 2, 0))
     if channels[0] == 0:
-        img = img.mean(axis=-1)[:, :, np.newaxis]
+        img = img.mean(axis=-1)[:, :, torch.newaxis]
     for i in range(img.shape[-1]):
-        if np.ptp(img[:, :, i]) > 0:
-            img[:, :, i] = np.clip(transforms.normalize99(img[:, :, i]), 0, 1)
-            img[:, :, i] = np.clip(img[:, :, i], 0, 1)
+        if torch.ptp(img[:, :, i]) > 0:
+            img[:, :, i] = torch.clip(transforms.normalize99(img[:, :, i]), 0, 1)
+            img[:, :, i] = torch.clip(img[:, :, i], 0, 1)
     img *= 255
-    img = np.uint8(img)
-    RGB = np.zeros((img.shape[0], img.shape[1], 3), np.uint8)
+    img = torch.uint8(img)
+    RGB = torch.zeros((img.shape[0], img.shape[1], 3), torch.uint8)
     if img.shape[-1] == 1:
-        RGB = np.tile(img, (1, 1, 3))
+        RGB = torch.tile(img, (1, 1, 3))
     else:
         RGB[:, :, channels[0] - 1] = img[:, :, 0]
         if channels[1] > 0:
@@ -251,22 +254,22 @@ def image_to_rgb(img0, channels=[0, 0]):
 def interesting_patch(mask, bsize=130):
     """get patch of size bsize x bsize with most masks"""
     Ly, Lx = mask.shape
-    m = np.float32(mask > 0)
+    m = torch.float32(mask > 0)
     m = gaussian_filter(m, bsize / 2)
-    y, x = np.unravel_index(np.argmax(m), m.shape)
+    y, x = torch.unravel_index(torch.argmax(m), m.shape)
     ycent = max(bsize // 2, min(y, Ly - bsize // 2))
     xcent = max(bsize // 2, min(x, Lx - bsize // 2))
     patch = [
-        np.arange(ycent - bsize // 2, ycent + bsize // 2, 1, int),
-        np.arange(xcent - bsize // 2, xcent + bsize // 2, 1, int),
+        torch.arange(ycent - bsize // 2, ycent + bsize // 2, 1, int),
+        torch.arange(xcent - bsize // 2, xcent + bsize // 2, 1, int),
     ]
     return patch
 
 
 def disk(med, r, Ly, Lx):
     """returns pixels of disk with radius r and center med"""
-    yy, xx = np.meshgrid(
-        np.arange(0, Ly, 1, int), np.arange(0, Lx, 1, int), indexing="ij"
+    yy, xx = torch.meshgrid(
+        torch.arange(0, Ly, 1, int), torch.arange(0, Lx, 1, int), indexing="ij"
     )
     inds = ((yy - med[0]) ** 2 + (xx - med[1]) ** 2) ** 0.5 <= r
     y = yy[inds].flatten()
@@ -281,7 +284,7 @@ def outline_view(img0, maski, color=[1, 0, 0], mode="inner"):
     #     img0 = utils.rescale(img0)
     if len(img0.shape) < 3:
         #         img0 = image_to_rgb(img0) broken, transposing some images...
-        img0 = np.stack([img0] * 3, axis=-1)
+        img0 = torch.stack([img0] * 3, axis=-1)
 
     if SKIMAGE_ENABLED:
         outlines = find_boundaries(
@@ -291,9 +294,9 @@ def outline_view(img0, maski, color=[1, 0, 0], mode="inner"):
         outlines = utils.masks_to_outlines(
             maski, mode=mode
         )  # not using masks_to_outlines as that gives border 'outlines'
-    outY, outX = np.nonzero(outlines)
+    outY, outX = torch.nonzero(outlines)
     imgout = img0.copy()
-    #     imgout[outY, outX] = np.array([255,0,0]) #pure red
-    imgout[outY, outX] = np.array(color)
+    #     imgout[outY, outX] = torch.array([255,0,0]) #pure red
+    imgout[outY, outX] = torch.array(color)
 
     return imgout

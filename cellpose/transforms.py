@@ -1,20 +1,20 @@
-import numpy as np
-import warnings
-import cv2
-
 import logging
+import warnings
+from typing import List, Optional, Tuple
+
+import cv2
+import numpy as np
+import torch
 
 transforms_logger = logging.getLogger(__name__)
 
-from . import dynamics, utils
 
-
-def _taper_mask(ly=224, lx=224, sig=7.5):
+def _taper_mask(ly=224, lx=224, sig=7.5) -> torch.Tensor:
     bsize = max(224, max(ly, lx))
-    xm = np.arange(bsize)
-    xm = np.abs(xm - xm.mean())
-    mask = 1 / (1 + np.exp((xm - (bsize / 2 - 20)) / sig))
-    mask = mask * mask[:, np.newaxis]
+    xm = torch.arange(bsize).float()
+    xm = torch.abs(xm - xm.mean())
+    mask = 1 / (1 + torch.exp((xm - (bsize / 2 - 20)) / sig))
+    mask = mask * mask.unsqueeze(-1)
     mask = mask[
         bsize // 2 - ly // 2 : bsize // 2 + ly // 2 + ly % 2,
         bsize // 2 - lx // 2 : bsize // 2 + lx // 2 + lx % 2,
@@ -58,7 +58,13 @@ def unaugment_tiles(y, unet=False):
     return y
 
 
-def average_tiles(y, ysub, xsub, Ly, Lx):
+def average_tiles(
+    y: torch.Tensor,
+    ysub: List,
+    xsub: List,
+    Ly: int,
+    Lx: int,
+) -> torch.Tensor:
     """average results of network over tiles
 
     Parameters
@@ -88,8 +94,9 @@ def average_tiles(y, ysub, xsub, Ly, Lx):
         network output averaged over tiles
 
     """
-    Navg = np.zeros((Ly, Lx))
-    yf = np.zeros((y.shape[1], Ly, Lx), np.float32)
+
+    Navg = torch.zeros((Ly, Lx))
+    yf = torch.zeros((y.shape[1], Ly, Lx), dtype=torch.float32)
     # taper edges of tiles
     mask = _taper_mask(ly=y.shape[-2], lx=y.shape[-1])
     for j in range(len(ysub)):
@@ -99,7 +106,7 @@ def average_tiles(y, ysub, xsub, Ly, Lx):
     return yf
 
 
-def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
+def make_tiles(imgi: torch.Tensor, bsize=224, augment=False, tile_overlap=0.1):
     """make tiles of image to run at test-time
 
     if augmented, tiles are flipped and tile_overlap=2.
@@ -135,28 +142,29 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
 
 
     """
-
     nchan, Ly, Lx = imgi.shape
     if augment:
-        bsize = np.int32(bsize)
+        bsize = torch.int32(bsize)
         # pad if image smaller than bsize
         if Ly < bsize:
-            imgi = np.concatenate((imgi, np.zeros((nchan, bsize - Ly, Lx))), axis=1)
+            imgi = torch.concat((imgi, torch.zeros((nchan, bsize - Ly, Lx))), dim=1)
             Ly = bsize
         if Lx < bsize:
-            imgi = np.concatenate((imgi, np.zeros((nchan, Ly, bsize - Lx))), axis=2)
+            imgi = torch.concat((imgi, torch.zeros((nchan, Ly, bsize - Lx))), dim=2)
         Ly, Lx = imgi.shape[-2:]
         # tiles overlap by half of tile size
-        ny = max(2, int(np.ceil(2.0 * Ly / bsize)))
-        nx = max(2, int(np.ceil(2.0 * Lx / bsize)))
-        ystart = np.linspace(0, Ly - bsize, ny).astype(int)
-        xstart = np.linspace(0, Lx - bsize, nx).astype(int)
+        ny = max(2, int(torch.ceil(2.0 * Ly / bsize)))
+        nx = max(2, int(torch.ceil(2.0 * Lx / bsize)))
+        ystart = torch.linspace(0, Ly - bsize, ny).astype(int)
+        xstart = torch.linspace(0, Lx - bsize, nx).astype(int)
 
         ysub = []
         xsub = []
 
         # flip tiles so that overlapping segments are processed in rotation
-        IMG = np.zeros((len(ystart), len(xstart), nchan, bsize, bsize), np.float32)
+        IMG = torch.zeros(
+            (len(ystart), len(xstart), nchan, bsize, bsize), torch.float32
+        )
         for j in range(len(ystart)):
             for i in range(len(xstart)):
                 ysub.append([ystart[j], ystart[j] + bsize])
@@ -174,17 +182,27 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
     else:
         tile_overlap = min(0.5, max(0.05, tile_overlap))
         bsizeY, bsizeX = min(bsize, Ly), min(bsize, Lx)
-        bsizeY = np.int32(bsizeY)
-        bsizeX = np.int32(bsizeX)
+        # bsizeY = bsizeY.int()
+        # bsizeX = bsizeX.int()
         # tiles overlap by 10% tile size
-        ny = 1 if Ly <= bsize else int(np.ceil((1.0 + 2 * tile_overlap) * Ly / bsize))
-        nx = 1 if Lx <= bsize else int(np.ceil((1.0 + 2 * tile_overlap) * Lx / bsize))
-        ystart = np.linspace(0, Ly - bsizeY, ny).astype(int)
-        xstart = np.linspace(0, Lx - bsizeX, nx).astype(int)
+        ny = (
+            1
+            if Ly <= bsize
+            else int(torch.ceil(torch.tensor((1.0 + 2 * tile_overlap) * Ly / bsize)))
+        )
+        nx = (
+            1
+            if Lx <= bsize
+            else int(torch.ceil(torch.tensor((1.0 + 2 * tile_overlap) * Lx / bsize)))
+        )
+        ystart = torch.linspace(0, Ly - bsizeY, ny).int()
+        xstart = torch.linspace(0, Lx - bsizeX, nx).int()
 
         ysub = []
         xsub = []
-        IMG = np.zeros((len(ystart), len(xstart), nchan, bsizeY, bsizeX), np.float32)
+        IMG = torch.zeros(
+            (len(ystart), len(xstart), nchan, bsizeY, bsizeX), dtype=torch.float32
+        )
         for j in range(len(ystart)):
             for i in range(len(xstart)):
                 ysub.append([ystart[j], ystart[j] + bsizeY])
@@ -196,28 +214,28 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
     return IMG, ysub, xsub, Ly, Lx
 
 
-def normalize99(Y, lower=1, upper=99):
+def normalize99(Y: torch.Tensor, lower=0.01, upper=0.99):
     """normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile"""
-    X = Y.copy()
-    x01 = np.percentile(X, lower)
-    x99 = np.percentile(X, upper)
+    X = Y.clone()
+    x01 = torch.quantile(X, lower)
+    x99 = torch.quantile(X, upper)
     X = (X - x01) / (x99 - x01)
     return X
 
 
-def move_axis(img, m_axis=-1, first=True):
+def move_axis(img: torch.Tensor, m_axis=-1, first=True):
     """move axis m_axis to first or last position"""
     if m_axis == -1:
         m_axis = img.ndim - 1
     m_axis = min(img.ndim - 1, m_axis)
-    axes = np.arange(0, img.ndim)
+    axes = torch.arange(0, img.ndim)
     if first:
         axes[1 : m_axis + 1] = axes[:m_axis]
         axes[0] = m_axis
     else:
         axes[m_axis:-1] = axes[m_axis + 1 :]
         axes[-1] = m_axis
-    img = img.transpose(tuple(axes))
+    img = img.permute(tuple(axes))
     return img
 
 
@@ -244,9 +262,9 @@ def update_axis(m_axis, to_squeeze, ndim):
     if (to_squeeze == m_axis).sum() == 1:
         m_axis = None
     else:
-        inds = np.ones(ndim, bool)
+        inds = torch.ones(ndim, bool)
         inds[to_squeeze] = False
-        m_axis = np.nonzero(np.arange(0, ndim)[inds] == m_axis)[0]
+        m_axis = torch.nonzero(torch.arange(0, ndim)[inds] == m_axis)[0]
         if len(m_axis) > 0:
             m_axis = m_axis[0]
         else:
@@ -268,7 +286,7 @@ def convert_image(
 
     # squeeze image, and if channel_axis or z_axis given, transpose image
     if x.ndim > 3:
-        to_squeeze = np.array([int(isq) for isq, s in enumerate(x.shape) if s == 1])
+        to_squeeze = torch.array([int(isq) for isq, s in enumerate(x.shape) if s == 1])
         # remove channel axis if number of channels is 1
         if len(to_squeeze) > 0:
             channel_axis = (
@@ -289,20 +307,20 @@ def convert_image(
         if channel_axis is not None:
             channel_axis += 1
         if x.ndim == 3:
-            x = x[..., np.newaxis]
+            x = x[..., torch.newaxis]
 
     # put channel axis last
     if channel_axis is not None and x.ndim > 2:
         x = move_axis(x, m_axis=channel_axis, first=False)
     elif x.ndim == 2:
-        x = x[:, :, np.newaxis]
+        x = x[:, :, torch.newaxis]
 
     if do_3D:
         if x.ndim < 3:
             transforms_logger.critical("ERROR: cannot process 2D images in 3D mode")
             raise ValueError("ERROR: cannot process 2D images in 3D mode")
         elif x.ndim < 4:
-            x = x[..., np.newaxis]
+            x = x[..., torch.newaxis]
 
     if channel_axis is None:
         x = move_min_dim(x)
@@ -334,8 +352,8 @@ def convert_image(
             raise ValueError("ERROR: cannot process 4D images in 2D mode")
 
         if x.shape[-1] < nchan:
-            x = np.concatenate(
-                (x, np.tile(np.zeros_like(x), (1, 1, nchan - 1))), axis=-1
+            x = torch.concatenate(
+                (x, torch.tile(torch.zeros_like(x), (1, 1, nchan - 1))), axis=-1
             )
 
     if normalize or invert:
@@ -344,7 +362,13 @@ def convert_image(
     return x
 
 
-def reshape(data, channels=[0, 0], chan_first=False):
+def ptp(input: torch.Tensor, dim: Optional[int] = None, keepdim=False) -> torch.Tensor:
+    if dim is None:
+        return input.max() - input.min()
+    return input.max(dim, keepdim).values - input.min(dim, keepdim).values
+
+
+def reshape(data: torch.Tensor, channels=[0, 0], chan_first=False):
     """reshape data using channels
 
     Parameters
@@ -367,26 +391,26 @@ def reshape(data, channels=[0, 0], chan_first=False):
     data : numpy array that's (Z x ) Ly x Lx x nchan (if chan_first==False)
 
     """
-    data = data.astype(np.float32)
+    data = data.float()
     if data.ndim < 3:
-        data = data[:, :, np.newaxis]
+        data = data.unsqueeze(dim=-1)
     elif data.shape[0] < 8 and data.ndim == 3:
-        data = np.transpose(data, (1, 2, 0))
+        data = data.permute(1, 2, 0)
 
     # use grayscale image
     if data.shape[-1] == 1:
-        data = np.concatenate((data, np.zeros_like(data)), axis=-1)
+        data = torch.concat((data, torch.zeros_like(data)), dim=-1)
     else:
         if channels[0] == 0:
-            data = data.mean(axis=-1, keepdims=True)
-            data = np.concatenate((data, np.zeros_like(data)), axis=-1)
+            data = data.mean(dim=-1, keepdim=True)
+            data = torch.concat((data, torch.zeros_like(data)), dim=-1)
         else:
             chanid = [channels[0] - 1]
             if channels[1] > 0:
                 chanid.append(channels[1] - 1)
             data = data[..., chanid]
             for i in range(data.shape[-1]):
-                if np.ptp(data[..., i]) == 0.0:
+                if ptp(data[..., i]) == 0.0:
                     if i == 0:
                         warnings.warn("chan to seg' has value range of ZERO")
                     else:
@@ -394,16 +418,16 @@ def reshape(data, channels=[0, 0], chan_first=False):
                             "'chan2 (opt)' has value range of ZERO, can instead set chan2 to 0"
                         )
             if data.shape[-1] == 1:
-                data = np.concatenate((data, np.zeros_like(data)), axis=-1)
+                data = torch.concat((data, torch.zeros_like(data)), dim=-1)
     if chan_first:
         if data.ndim == 4:
-            data = np.transpose(data, (3, 0, 1, 2))
+            data = data.permute(3, 0, 1, 2)
         else:
-            data = np.transpose(data, (2, 0, 1))
+            data = data.permute(2, 0, 1)
     return data
 
 
-def normalize_img(img, axis=-1, invert=False):
+def normalize_img(img: torch.Tensor, axis=-1, invert=False):
     """normalize each channel of the image so that so that 0.0=1st percentile
     and 1.0=99th percentile of image intensities
 
@@ -430,19 +454,19 @@ def normalize_img(img, axis=-1, invert=False):
         transforms_logger.critical(error_message)
         raise ValueError(error_message)
 
-    img = img.astype(np.float32)
-    img = np.moveaxis(img, axis, 0)
+    img = img.float()
+    img = torch.moveaxis(img, axis, 0)
     for k in range(img.shape[0]):
         # ptp can still give nan's with weird images
-        i99 = np.percentile(img[k], 99)
-        i1 = np.percentile(img[k], 1)
-        if i99 - i1 > +1e-3:  # np.ptp(img[k]) > 1e-3:
+        i99 = torch.quantile(img[k], 0.99)
+        i1 = torch.quantile(img[k], 0.01)
+        if i99 - i1 > +1e-3:  # torch.ptp(img[k]) > 1e-3:
             img[k] = normalize99(img[k])
             if invert:
                 img[k] = -1 * img[k] + 1
         else:
             img[k] = 0
-    img = np.moveaxis(img, 0, axis)
+    img = torch.moveaxis(img, 0, axis)
     return img
 
 
@@ -546,7 +570,7 @@ def reshape_and_normalize_data(
                 data[i] = move_min_dim(data[i], force=True)
                 data[i] = reshape(data[i], channels=channels, chan_first=True)
             if data[i].ndim < 3:
-                data[i] = data[i][np.newaxis, :, :]
+                data[i] = data[i][torch.newaxis, :, :]
             if normalize:
                 data[i] = normalize_img(data[i], axis=0)
 
@@ -556,8 +580,13 @@ def reshape_and_normalize_data(
 
 
 def resize_image(
-    img0, Ly=None, Lx=None, rsz=None, interpolation=cv2.INTER_LINEAR, no_channels=False
-):
+    img0: torch.Tensor,
+    Ly: Optional[int] = None,
+    Lx: Optional[int] = None,
+    rsz: Optional[float] = None,
+    interpolation: int = cv2.INTER_LINEAR,
+    no_channels: bool = False,
+) -> torch.Tensor:
     """resize image for computing flows / unresize for computing dynamics
 
     Parameters
@@ -589,7 +618,7 @@ def resize_image(
 
     if Ly is None:
         # determine Ly and Lx using rsz
-        if not isinstance(rsz, list) and not isinstance(rsz, np.ndarray):
+        if not isinstance(rsz, list) and not isinstance(rsz, torch.Tensor):
             rsz = [rsz, rsz]
         if no_channels:
             Ly = int(img0.shape[-2] * rsz[-2])
@@ -602,17 +631,25 @@ def resize_image(
     # but if this is called for grayscale images, they first become [Ly,Lx,2] so ndim=3 but
     if (img0.ndim > 2 and no_channels) or (img0.ndim == 4 and not no_channels):
         if no_channels:
-            imgs = np.zeros((img0.shape[0], Ly, Lx), np.float32)
+            imgs = torch.zeros((img0.shape[0], Ly, Lx), dtype=torch.float32)
         else:
-            imgs = np.zeros((img0.shape[0], Ly, Lx, img0.shape[-1]), np.float32)
+            imgs = torch.zeros(
+                (img0.shape[0], Ly, Lx, img0.shape[-1]), dtype=torch.float32
+            )
         for i, img in enumerate(img0):
-            imgs[i] = cv2.resize(img, (Lx, Ly), interpolation=interpolation)
+            imgs[i] = cv2.resize(
+                src=img.numpy(), dsize=(Lx, Ly), interpolation=interpolation
+            )
     else:
-        imgs = cv2.resize(img0, (Lx, Ly), interpolation=interpolation)
-    return imgs
+        imgs = cv2.resize(src=img0.numpy(), dsize=(Lx, Ly), interpolation=interpolation)
+    return torch.from_numpy(imgs)
 
 
-def pad_image_ND(img0, div=16, extra=1):
+def pad_image_ND(
+    img0: torch.Tensor,
+    div=16,
+    extra=1,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """pad image for test-time so that its dimensions are a multiple of 16 (2D or 3D)
 
     Parameters
@@ -636,10 +673,10 @@ def pad_image_ND(img0, div=16, extra=1):
         xrange of pixels in I corresponding to img0
 
     """
-    Lpad = int(div * np.ceil(img0.shape[-2] / div) - img0.shape[-2])
+    Lpad = int(div * torch.ceil(torch.tensor(img0.shape[-2] / div)) - img0.shape[-2])
     xpad1 = extra * div // 2 + Lpad // 2
     xpad2 = extra * div // 2 + Lpad - Lpad // 2
-    Lpad = int(div * np.ceil(img0.shape[-1] / div) - img0.shape[-1])
+    Lpad = int(div * torch.ceil(torch.tensor(img0.shape[-1] / div)) - img0.shape[-1])
     ypad1 = extra * div // 2 + Lpad // 2
     ypad2 = extra * div // 2 + Lpad - Lpad // 2
 
@@ -651,9 +688,9 @@ def pad_image_ND(img0, div=16, extra=1):
     I = np.pad(img0, pads, mode="constant")
 
     Ly, Lx = img0.shape[-2:]
-    ysub = np.arange(xpad1, xpad1 + Ly)
-    xsub = np.arange(ypad1, ypad1 + Lx)
-    return I, ysub, xsub
+    ysub = torch.arange(xpad1, xpad1 + Ly)
+    xsub = torch.arange(ypad1, ypad1 + Lx)
+    return torch.from_numpy(I), ysub, xsub
 
 
 def normalize_field(mu):
@@ -699,14 +736,14 @@ def _image_resizer(img, resize=512, to_uint8=False):
     ny, nx = img.shape[:2]
     if to_uint8:
         if img.max() <= 255 and img.min() >= 0 and img.max() > 1:
-            img = img.astype(np.uint8)
+            img = img.astype(torch.uint8)
         else:
-            img = img.astype(np.float32)
+            img = img.astype(torch.float32)
             img -= img.min()
             img /= img.max()
             img *= 255
-            img = img.astype(np.uint8)
-    if np.array(img.shape).max() > resize:
+            img = img.astype(torch.uint8)
+    if torch.array(img.shape).max() > resize:
         if ny > nx:
             nx = int(nx / ny * resize)
             ny = resize
@@ -715,7 +752,7 @@ def _image_resizer(img, resize=512, to_uint8=False):
             nx = resize
         shape = (nx, ny)
         img = cv2.resize(img, shape)
-        img = img.astype(np.uint8)
+        img = img.astype(torch.uint8)
     return img
 
 
@@ -742,7 +779,7 @@ def random_rotate_and_resize(
         If unet, second channel is dist_to_bound.
     scale_range: float (optional, default 1.0)
         Range of resizing of images for augmentation. Images are resized by
-        (1-scale_range/2) + scale_range * np.random.rand()
+        (1-scale_range/2) + scale_range * torch.random.rand()
     xy: tuple, int (optional, default (224,224))
         size of transformed images to return
     do_flip: bool (optional, default True)
@@ -767,7 +804,7 @@ def random_rotate_and_resize(
         nchan = X[0].shape[0]
     else:
         nchan = 1
-    imgi = np.zeros((nimg, nchan, xy[0], xy[1]), np.float32)
+    imgi = torch.zeros((nimg, nchan, xy[0], xy[1]), torch.float32)
 
     lbl = []
     if Y is not None:
@@ -775,41 +812,48 @@ def random_rotate_and_resize(
             nt = Y[0].shape[0]
         else:
             nt = 1
-        lbl = np.zeros((nimg, nt, xy[0], xy[1]), np.float32)
+        lbl = torch.zeros((nimg, nt, xy[0], xy[1]), torch.float32)
 
-    scale = np.ones(nimg, np.float32)
+    scale = torch.ones(nimg, torch.float32)
 
     for n in range(nimg):
         Ly, Lx = X[n].shape[-2:]
 
         if random_per_image or n == 0:
             # generate random augmentation parameters
-            flip = np.random.rand() > 0.5
-            theta = np.random.rand() * np.pi * 2
-            scale[n] = (1 - scale_range / 2) + scale_range * np.random.rand()
+            flip = torch.random.rand() > 0.5
+            theta = torch.random.rand() * torch.pi * 2
+            scale[n] = (1 - scale_range / 2) + scale_range * torch.random.rand()
             if rescale is not None:
                 scale[n] *= 1.0 / rescale[n]
-            dxy = np.maximum(
-                0, np.array([Lx * scale[n] - xy[1], Ly * scale[n] - xy[0]])
+            dxy = torch.maximum(
+                0, torch.array([Lx * scale[n] - xy[1], Ly * scale[n] - xy[0]])
             )
             dxy = (
-                np.random.rand(
+                torch.random.rand(
                     2,
                 )
                 - 0.5
             ) * dxy
 
             # create affine transform
-            cc = np.array([Lx / 2, Ly / 2])
-            cc1 = cc - np.array([Lx - xy[1], Ly - xy[0]]) / 2 + dxy
-            pts1 = np.float32([cc, cc + np.array([1, 0]), cc + np.array([0, 1])])
-            pts2 = np.float32(
+            cc = torch.array([Lx / 2, Ly / 2])
+            cc1 = cc - torch.array([Lx - xy[1], Ly - xy[0]]) / 2 + dxy
+            pts1 = torch.float32(
+                [cc, cc + torch.array([1, 0]), cc + torch.array([0, 1])]
+            )
+            pts2 = torch.float32(
                 [
                     cc1,
-                    cc1 + scale[n] * np.array([np.cos(theta), np.sin(theta)]),
+                    cc1 + scale[n] * torch.array([torch.cos(theta), torch.sin(theta)]),
                     cc1
                     + scale[n]
-                    * np.array([np.cos(np.pi / 2 + theta), np.sin(np.pi / 2 + theta)]),
+                    * torch.array(
+                        [
+                            torch.cos(torch.pi / 2 + theta),
+                            torch.sin(torch.pi / 2 + theta),
+                        ]
+                    ),
                 ]
             )
             M = cv2.getAffineTransform(pts1, pts2)
@@ -818,7 +862,7 @@ def random_rotate_and_resize(
         if Y is not None:
             labels = Y[n].copy()
             if labels.ndim < 3:
-                labels = labels[np.newaxis, :, :]
+                labels = labels[torch.newaxis, :, :]
 
         if flip and do_flip:
             img = img[..., ::-1]
@@ -845,7 +889,7 @@ def random_rotate_and_resize(
             if nt > 1 and not unet:
                 v1 = lbl[n, 2].copy()
                 v2 = lbl[n, 1].copy()
-                lbl[n, 1] = -v1 * np.sin(-theta) + v2 * np.cos(-theta)
-                lbl[n, 2] = v1 * np.cos(-theta) + v2 * np.sin(-theta)
+                lbl[n, 1] = -v1 * torch.sin(-theta) + v2 * torch.cos(-theta)
+                lbl[n, 2] = v1 * torch.cos(-theta) + v2 * torch.sin(-theta)
 
     return imgi, lbl, scale

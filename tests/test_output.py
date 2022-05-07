@@ -1,8 +1,9 @@
-from cellpose import io, models, metrics, plot
-from pathlib import Path
-from subprocess import check_output, STDOUT
-import os, shutil
+import os
+from subprocess import STDOUT, check_output
+
 import numpy as np
+import torch
+from cellpose import io, metrics, models, plot
 
 try:
     import matplotlib.pyplot as plt
@@ -40,14 +41,16 @@ def test_class_2D(data_dir, image_names):
     for m, model_type in enumerate(model_types):
         model = models.Cellpose(model_type=model_type)
         masks, flows, _, _ = model.eval(
-            img,
+            torch.from_numpy(img),
             diameter=0,
             cellprob_threshold=0,
             channels=[chan[m], chan2[m]],
             net_avg=False,
             resample=False,
         )
-        io.imsave(str(data_dir.joinpath("2D").joinpath("rgb_2D_cp_masks.png")), masks)
+        io.imsave(
+            str(data_dir.joinpath("2D").joinpath("rgb_2D_cp_masks.png")), masks.numpy()
+        )
         #         io.imsave('/home/kcutler/DataDrive/cellpose_debug/rgb_2D_cp_masks.png', masks)
         compare_masks(data_dir, [image_name], "2D", model_type)
         clear_output(data_dir, image_names)

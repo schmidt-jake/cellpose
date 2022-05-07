@@ -1,13 +1,19 @@
-import os, sys, time, shutil, tempfile, datetime, pathlib, subprocess
+import datetime
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
-from torch import optim
 import torch.nn.functional as F
-import datetime
+from torch import optim
 
-
-from . import transforms, io, dynamics, utils
+from . import dynamics, io, transforms, utils
 
 sz = 3
 
@@ -266,7 +272,7 @@ class CPnet(nn.Module):
         )
         self.style_on = style_on
 
-    def forward(self, data):
+    def forward(self, data: torch.Tensor):
         if self.mkldnn:
             data = data.to_mkldnn()
         T0 = self.downsample(data)

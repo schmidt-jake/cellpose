@@ -2,14 +2,16 @@ import logging
 import os
 import pathlib
 import time
+from typing import List, Optional, Union
 
 import numpy as np
+import torch
 from tqdm import trange
 
-models_logger = logging.getLogger(__name__)
+from cellpose import dynamics, plot, transforms, utils
+from cellpose.core import UnetModel, assign_device, parse_model_string
 
-from . import dynamics, plot, transforms, utils
-from .core import UnetModel, assign_device, parse_model_string
+models_logger = logging.getLogger(__name__)
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")
@@ -92,7 +94,13 @@ class Cellpose:
 
     """
 
-    def __init__(self, gpu=False, model_type="cyto", net_avg=False, device=None):
+    def __init__(
+        self,
+        gpu: bool = False,
+        model_type: str = "cyto",
+        net_avg: bool = False,
+        device: Optional[torch.device] = None,
+    ):
         super(Cellpose, self).__init__()
         self.torch = True
 
@@ -120,35 +128,36 @@ class Cellpose:
         # size model not used for bacterial model
         self.pretrained_size = size_model_path(model_type, self.torch)
         self.sz = SizeModel(
-            device=self.device, pretrained_size=self.pretrained_size, cp_model=self.cp
+            pretrained_size=self.pretrained_size,
+            cp_model=self.cp,
         )
         self.sz.model_type = model_type
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channel_axis=None,
-        z_axis=None,
-        invert=False,
-        normalize=True,
-        diameter=30.0,
-        do_3D=False,
-        anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        resample=True,
-        interp=True,
-        flow_threshold=0.4,
-        cellprob_threshold=0.0,
-        min_size=15,
-        stitch_threshold=0.0,
-        rescale=None,
+        x: torch.Tensor,
+        batch_size: int = 8,
+        channels: List[int] = None,
+        channel_axis: int = None,
+        z_axis: int = None,
+        invert: bool = False,
+        normalize: bool = True,
+        diameter: float = 30.0,
+        do_3D: bool = False,
+        anisotropy: Optional[float] = None,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        resample: bool = True,
+        interp: bool = True,
+        flow_threshold: float = 0.4,
+        cellprob_threshold: float = 0.0,
+        min_size: int = 15,
+        stitch_threshold: float = 0.0,
+        rescale: Optional[float] = None,
         progress=None,
-        model_loaded=False,
+        model_loaded: bool = False,
     ):
         """run cellpose and get masks
 
@@ -273,13 +282,13 @@ class Cellpose:
                 tile=tile,
                 normalize=normalize,
             )
-            rescale = self.diam_mean / np.array(diams)
+            rescale = self.diam_mean / diams
             diameter = None
             models_logger.info(
                 "estimated cell diameter(s) in %0.2f sec" % (time.time() - tic)
             )
             models_logger.info(">>> diameter(s) = ")
-            if isinstance(diams, list) or isinstance(diams, np.ndarray):
+            if isinstance(diams, list) or isinstance(diams, torch.Tensor):
                 diam_string = "[" + "".join(["%0.2f, " % d for d in diams]) + "]"
             else:
                 diam_string = "[ %0.2f ]" % diams
@@ -373,22 +382,22 @@ class CellposeModel(UnetModel):
 
     def __init__(
         self,
-        gpu=False,
-        pretrained_model=False,
-        model_type=None,
-        net_avg=False,
-        diam_mean=30.0,
-        device=None,
-        residual_on=True,
-        style_on=True,
-        concatenation=False,
-        nchan=2,
+        gpu: bool = False,
+        pretrained_model: bool = False,
+        model_type: str = None,
+        net_avg: bool = False,
+        diam_mean: float = 30.0,
+        device: Optional[torch.device] = None,
+        residual_on: bool = True,
+        style_on: bool = True,
+        concatenation: bool = False,
+        nchan: int = 2,
     ):
         self.torch = True
-        if isinstance(pretrained_model, np.ndarray):
-            pretrained_model = list(pretrained_model)
-        elif isinstance(pretrained_model, str):
-            pretrained_model = [pretrained_model]
+        # if isinstance(pretrained_model, torch.ndarray):
+        #     pretrained_model = list(pretrained_model)
+        # elif isinstance(pretrained_model, str):
+        #     pretrained_model = [pretrained_model]
 
         self.diam_mean = diam_mean
         builtin = True
@@ -396,14 +405,14 @@ class CellposeModel(UnetModel):
         if model_type is not None or (
             pretrained_model and not os.path.exists(pretrained_model[0])
         ):
-            pretrained_model_string = model_type if model_type is not None else "cyto"
+            pretrained_model_string = model_type or "cyto"
             model_strings = get_user_models()
             all_models = MODEL_NAMES.copy()
             all_models.extend(model_strings)
-            if ~np.any([pretrained_model_string == s for s in MODEL_NAMES]):
-                builtin = False
-            elif ~np.any([pretrained_model_string == s for s in all_models]):
-                pretrained_model_string = "cyto"
+            # if ~torch.any([pretrained_model_string == s for s in MODEL_NAMES]):
+            #     builtin = False
+            # elif ~torch.any([pretrained_model_string == s for s in all_models]):
+            #     pretrained_model_string = "cyto"
 
             if pretrained_model and not os.path.exists(pretrained_model[0]):
                 models_logger.warning("pretrained model has incorrect path")
@@ -434,7 +443,6 @@ class CellposeModel(UnetModel):
             gpu=gpu,
             pretrained_model=False,
             diam_mean=self.diam_mean,
-            net_avg=net_avg,
             device=device,
             residual_on=residual_on,
             style_on=style_on,
@@ -446,8 +454,8 @@ class CellposeModel(UnetModel):
         self.pretrained_model = pretrained_model
         if self.pretrained_model:
             self.net.load_model(self.pretrained_model[0], cpu=(not self.gpu))
-            self.diam_mean = self.net.diam_mean.data.cpu().numpy()[0]
-            self.diam_labels = self.net.diam_labels.data.cpu().numpy()[0]
+            self.diam_mean = self.net.diam_mean.data.cpu().item()
+            self.diam_labels = self.net.diam_labels.data.cpu().item()
             models_logger.info(
                 f">>>> model diam_mean = {self.diam_mean: .3f} (ROIs rescaled to this size during training)"
             )
@@ -463,31 +471,31 @@ class CellposeModel(UnetModel):
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channel_axis=None,
-        z_axis=None,
-        normalize=True,
-        invert=False,
+        x: torch.Tensor,
+        batch_size: int = 8,
+        channels: List[int] = None,
+        channel_axis: Optional[int] = None,
+        z_axis: Optional[int] = None,
+        normalize: bool = True,
+        invert: bool = False,
         rescale=None,
         diameter=None,
-        do_3D=False,
+        do_3D: bool = False,
         anisotropy=None,
-        net_avg=False,
-        augment=False,
-        tile=True,
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
         tile_overlap=0.1,
-        resample=True,
-        interp=True,
-        flow_threshold=0.4,
-        cellprob_threshold=0.0,
-        compute_masks=True,
-        min_size=15,
-        stitch_threshold=0.0,
+        resample: bool = True,
+        interp: bool = True,
+        flow_threshold: float = 0.4,
+        cellprob_threshold: float = 0.0,
+        compute_masks: bool = True,
+        min_size: int = 15,
+        stitch_threshold: float = 0.0,
         progress=None,
-        loop_run=False,
-        model_loaded=False,
+        loop_run: bool = False,
+        model_loaded: bool = False,
     ):
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
@@ -609,7 +617,7 @@ class CellposeModel(UnetModel):
                         len(channels) == len(x)
                         and (
                             isinstance(channels[i], list)
-                            or isinstance(channels[i], np.ndarray)
+                            or isinstance(channels[i], torch.Tensor)
                         )
                         and len(channels[i]) == 2
                     )
@@ -619,10 +627,10 @@ class CellposeModel(UnetModel):
                     normalize=normalize,
                     invert=invert,
                     rescale=rescale[i]
-                    if isinstance(rescale, list) or isinstance(rescale, np.ndarray)
+                    if isinstance(rescale, list) or isinstance(rescale, torch.Tensor)
                     else rescale,
                     diameter=diameter[i]
-                    if isinstance(diameter, list) or isinstance(diameter, np.ndarray)
+                    if isinstance(diameter, list) or isinstance(diameter, torch.Tensor)
                     else diameter,
                     do_3D=do_3D,
                     anisotropy=anisotropy,
@@ -664,7 +672,7 @@ class CellposeModel(UnetModel):
                 nchan=self.nchan,
             )
             if x.ndim < 4:
-                x = x[np.newaxis, ...]
+                x = x.unsqueeze(0)
             self.batch_size = batch_size
 
             if diameter is not None and diameter > 0:
@@ -672,6 +680,9 @@ class CellposeModel(UnetModel):
             elif rescale is None:
                 diameter = self.diam_labels
                 rescale = self.diam_mean / diameter
+
+            if isinstance(rescale, torch.Tensor):
+                rescale = rescale.item()
 
             masks, styles, dP, cellprob, p = self._run_cp(
                 x,
@@ -698,23 +709,23 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x,
-        compute_masks=True,
-        normalize=True,
-        invert=False,
-        rescale=1.0,
-        net_avg=False,
-        resample=True,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        cellprob_threshold=0.0,
-        flow_threshold=0.4,
-        min_size=15,
-        interp=True,
-        anisotropy=1.0,
-        do_3D=False,
-        stitch_threshold=0.0,
+        x: torch.Tensor,
+        compute_masks: bool = True,
+        normalize: bool = True,
+        invert: bool = False,
+        rescale: float = 1.0,
+        net_avg: bool = False,
+        resample: bool = True,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        cellprob_threshold: float = 0.0,
+        flow_threshold: float = 0.4,
+        min_size: int = 15,
+        interp: bool = True,
+        anisotropy: Optional[float] = 1.0,
+        do_3D: bool = False,
+        stitch_threshold: float = 0.0,
     ):
 
         tic = time.time()
@@ -723,7 +734,7 @@ class CellposeModel(UnetModel):
 
         bd, tr = None, None
         if do_3D:
-            img = np.asarray(x)
+            img = torch.asarray(x)
             if normalize or invert:
                 img = transforms.normalize_img(img, invert=invert)
             yf, styles = self._run_3D(
@@ -736,29 +747,30 @@ class CellposeModel(UnetModel):
                 tile_overlap=tile_overlap,
             )
             cellprob = yf[0][-1] + yf[1][-1] + yf[2][-1]
-            dP = np.stack(
-                (yf[1][0] + yf[2][0], yf[0][0] + yf[2][1], yf[0][1] + yf[1][1]), axis=0
+            dP = torch.stack(
+                (yf[1][0] + yf[2][0], yf[0][0] + yf[2][1], yf[0][1] + yf[1][1]), dim=0
             )  # (dZ, dY, dX)
             del yf
         else:
             tqdm_out = utils.TqdmToLogger(models_logger, level=logging.INFO)
             iterator = trange(nimg, file=tqdm_out) if nimg > 1 else range(nimg)
-            styles = np.zeros((nimg, self.nbase[-1]), np.float32)
+            styles = torch.zeros((nimg, self.nbase[-1]), dtype=torch.float32)
             if resample:
-                dP = np.zeros((2, nimg, shape[1], shape[2]), np.float32)
-                cellprob = np.zeros((nimg, shape[1], shape[2]), np.float32)
+                dP = torch.zeros((2, nimg, shape[1], shape[2]), dtype=torch.float32)
+                cellprob = torch.zeros((nimg, shape[1], shape[2]), dtype=torch.float32)
 
             else:
-                dP = np.zeros(
+                dP = torch.zeros(
                     (2, nimg, int(shape[1] * rescale), int(shape[2] * rescale)),
-                    np.float32,
+                    dtype=torch.float32,
                 )
-                cellprob = np.zeros(
-                    (nimg, int(shape[1] * rescale), int(shape[2] * rescale)), np.float32
+                cellprob = torch.zeros(
+                    (nimg, int(shape[1] * rescale), int(shape[2] * rescale)),
+                    dtype=torch.float32,
                 )
 
             for i in iterator:
-                img = np.asarray(x[i])
+                img = torch.asarray(x[i])
                 if normalize or invert:
                     img = transforms.normalize_img(img, invert=invert)
                 if rescale != 1.0:
@@ -774,10 +786,10 @@ class CellposeModel(UnetModel):
                     yf = transforms.resize_image(yf, shape[1], shape[2])
 
                 cellprob[i] = yf[:, :, 2]
-                dP[:, i] = yf[:, :, :2].transpose((2, 0, 1))
+                dP[:, i] = yf[:, :, :2].permute((2, 0, 1))
                 if self.nclasses == 4:
                     if i == 0:
-                        bd = np.zeros_like(cellprob)
+                        bd = torch.zeros_like(cellprob)
                     bd[i] = yf[:, :, 3]
                 styles[i] = style
             del yf, style
@@ -789,7 +801,7 @@ class CellposeModel(UnetModel):
 
         if compute_masks:
             tic = time.time()
-            niter = 200 if (do_3D and not resample) else (1 / rescale * 200)
+            niter = 200 if (do_3D and not resample) else int(1 / rescale * 200)
             if do_3D:
                 masks, p = dynamics.compute_masks(
                     dP,
@@ -822,14 +834,14 @@ class CellposeModel(UnetModel):
                     masks.append(outputs[0])
                     p.append(outputs[1])
 
-                masks = np.array(masks)
-                p = np.array(p)
-
                 if stitch_threshold > 0 and nimg > 1:
                     models_logger.info(
                         f"stitching {nimg} planes using stitch_threshold={stitch_threshold:0.3f} to make 3D masks"
                     )
                     masks = utils.stitch3D(masks, stitch_threshold=stitch_threshold)
+
+                masks = torch.concat(masks, dim=0)
+                p = torch.concat(p, dim=0)
 
             flow_time = time.time() - tic
             if nimg > 1:
@@ -842,7 +854,9 @@ class CellposeModel(UnetModel):
             )
 
         else:
-            masks, p = np.zeros(0), np.zeros(0)  # pass back zeros if not compute_masks
+            masks, p = torch.zeros(0), torch.zeros(
+                0
+            )  # pass back zeros if not compute_masks
         return masks, styles, dP, cellprob, p
 
     def loss_fn(self, lbl, y):
@@ -917,7 +931,7 @@ class CellposeModel(UnetModel):
         save_every: int (default, 100)
             save network every [save_every] epochs
 
-        learning_rate: float or list/np.ndarray (default, 0.2)
+        learning_rate: float or list/torch.ndarray (default, 0.2)
             learning rate for training, if list, must be same length as n_epochs
 
         n_epochs: int (default, 500)
@@ -969,13 +983,13 @@ class CellposeModel(UnetModel):
         else:
             test_flows = None
 
-        nmasks = np.array([label[0].max() for label in train_flows])
+        nmasks = torch.tensor([label[0].max() for label in train_flows])
         nremove = (nmasks < min_train_masks).sum()
         if nremove > 0:
             models_logger.warning(
                 f"{nremove} train images with number of masks less than min_train_masks ({min_train_masks}), removing from train set"
             )
-            ikeep = np.nonzero(nmasks >= min_train_masks)[0]
+            ikeep = torch.nonzero(nmasks >= min_train_masks)[0]
             train_data = [train_data[i] for i in ikeep]
             train_flows = [train_flows[i] for i in ikeep]
 
@@ -1005,7 +1019,7 @@ class CellposeModel(UnetModel):
         return model_path
 
 
-class SizeModel:
+class SizeModel(object):
     """linear regression model for determining the size of objects in image
     used to rescale before input to cp_model
     uses styles from cp_model
@@ -1026,9 +1040,11 @@ class SizeModel:
 
     """
 
-    def __init__(self, cp_model, device=None, pretrained_size=None, **kwargs):
-        super(SizeModel, self).__init__(**kwargs)
-
+    def __init__(
+        self,
+        cp_model: Union[UnetModel, CellposeModel],
+        pretrained_size=None,
+    ):
         self.pretrained_size = pretrained_size
         self.cp = cp_model
         self.device = self.cp.device
@@ -1046,7 +1062,7 @@ class SizeModel:
 
     def eval(
         self,
-        x,
+        x: torch.Tensor,
         channels=None,
         channel_axis=None,
         normalize=True,
@@ -1055,7 +1071,6 @@ class SizeModel:
         tile=True,
         batch_size=8,
         progress=None,
-        interp=True,
     ):
         """use images x to produce style or use style input to predict size of objects in image
 
@@ -1120,7 +1135,7 @@ class SizeModel:
                         and len(channels) == len(x)
                         and (
                             isinstance(channels[i], list)
-                            or isinstance(channels[i], np.ndarray)
+                            or isinstance(channels[i], torch.ndarray)
                         )
                         and len(channels[i]) == 2
                     )
@@ -1156,9 +1171,11 @@ class SizeModel:
             compute_masks=False,
         )[-1]
 
-        diam_style = self._size_estimation(np.array(styles))
+        diam_style = self._size_estimation(styles)
         diam_style = (
-            self.diam_mean if (diam_style == 0 or np.isnan(diam_style)) else diam_style
+            self.diam_mean
+            if (diam_style == 0 or torch.isnan(diam_style))
+            else diam_style
         )
 
         masks = self.cp.eval(
@@ -1180,22 +1197,23 @@ class SizeModel:
         )[0]
 
         diam = utils.diameters(masks)[0]
-        diam = self.diam_mean if (diam == 0 or np.isnan(diam)) else diam
+        diam = self.diam_mean if (diam == 0 or torch.isnan(diam)) else diam
         return diam, diam_style
 
-    def _size_estimation(self, style):
+    def _size_estimation(self, style: torch.Tensor) -> torch.Tensor:
         """linear regression from style to size
 
         sizes were estimated using "diameters" from square estimates not circles;
         therefore a conversion factor is included (to be removed)
 
         """
-        szest = np.exp(
-            self.params["A"] @ (style - self.params["smean"]).T
-            + np.log(self.diam_mean)
+        szest = torch.exp(
+            torch.from_numpy(self.params["A"]).float()
+            @ (style - self.params["smean"]).T
+            + torch.log(torch.tensor(self.diam_mean))
             + self.params["ymean"]
         )
-        szest = np.maximum(5.0, szest)
+        szest = torch.maximum(torch.tensor(5.0), szest)
         return szest
 
     def train(
@@ -1257,9 +1275,9 @@ class SizeModel:
         else:
             cp_model_path = self.cp.pretrained_model
 
-        diam_train = np.array([utils.diameters(lbl)[0] for lbl in train_labels])
+        diam_train = torch.array([utils.diameters(lbl)[0] for lbl in train_labels])
         if run_test:
-            diam_test = np.array([utils.diameters(lbl)[0] for lbl in test_labels])
+            diam_test = torch.array([utils.diameters(lbl)[0] for lbl in test_labels])
 
         # remove images with no masks
         for i in range(len(diam_train)):
@@ -1273,16 +1291,16 @@ class SizeModel:
                     del test_labels[i]
 
         nimg = len(train_data)
-        styles = np.zeros((n_epochs * nimg, 256), np.float32)
-        diams = np.zeros((n_epochs * nimg,), np.float32)
+        styles = torch.zeros((n_epochs * nimg, 256), torch.float32)
+        diams = torch.zeros((n_epochs * nimg,), torch.float32)
         tic = time.time()
         for iepoch in range(n_epochs):
-            iall = np.arange(0, nimg, 1, int)
+            iall = torch.arange(0, nimg, 1, int)
             for ibatch in range(0, nimg, batch_size):
                 inds = iall[ibatch : ibatch + batch_size]
                 imgi, lbl, scale = transforms.random_rotate_and_resize(
                     [train_data[i] for i in inds],
-                    Y=[train_labels[i].astype(np.int16) for i in inds],
+                    Y=[train_labels[i].astype(torch.int16) for i in inds],
                     scale_range=1,
                     xy=(512, 512),
                 )
@@ -1290,7 +1308,9 @@ class SizeModel:
                 feat = self.cp.network(imgi)[1]
                 styles[inds + nimg * iepoch] = feat
                 diams[inds + nimg * iepoch] = (
-                    np.log(diam_train[inds]) - np.log(self.diam_mean) + np.log(scale)
+                    torch.log(diam_train[inds])
+                    - torch.log(self.diam_mean)
+                    + torch.log(scale)
                 )
             del feat
             if (iepoch + 1) % 2 == 0:
@@ -1304,21 +1324,24 @@ class SizeModel:
         ymean = diams.mean()
         y = diams - ymean
 
-        A = np.linalg.solve(X @ X.T + l2_regularization * np.eye(X.shape[0]), X @ y)
+        A = torch.linalg.solve(
+            X @ X.T + l2_regularization * torch.eye(X.shape[0]), X @ y
+        )
         ypred = A @ X
-        models_logger.info("train correlation: %0.4f" % np.corrcoef(y, ypred)[0, 1])
+        models_logger.info("train correlation: %0.4f" % torch.corrcoef(y, ypred)[0, 1])
 
         if run_test:
             nimg_test = len(test_data)
-            styles_test = np.zeros((nimg_test, 256), np.float32)
+            styles_test = torch.zeros((nimg_test, 256), torch.float32)
             for i in range(nimg_test):
                 styles_test[i] = self.cp._run_net(test_data[i].transpose((1, 2, 0)))[1]
-            diam_test_pred = np.exp(
-                A @ (styles_test - smean).T + np.log(self.diam_mean) + ymean
+            diam_test_pred = torch.exp(
+                A @ (styles_test - smean).T + torch.log(self.diam_mean) + ymean
             )
-            diam_test_pred = np.maximum(5.0, diam_test_pred)
+            diam_test_pred = torch.maximum(5.0, diam_test_pred)
             models_logger.info(
-                "test correlation: %0.4f" % np.corrcoef(diam_test, diam_test_pred)[0, 1]
+                "test correlation: %0.4f"
+                % torch.corrcoef(diam_test, diam_test_pred)[0, 1]
             )
 
         self.pretrained_size = cp_model_path + "_size.npy"
@@ -1328,6 +1351,6 @@ class SizeModel:
             "diam_mean": self.diam_mean,
             "ymean": ymean,
         }
-        np.save(self.pretrained_size, self.params)
+        torch.save(self.pretrained_size, self.params)
         models_logger.info("model saved to " + self.pretrained_size)
         return self.params

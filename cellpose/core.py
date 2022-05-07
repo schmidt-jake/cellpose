@@ -1,20 +1,18 @@
-import os, sys, time, shutil, tempfile, datetime, pathlib, subprocess
+import datetime
 import logging
-import numpy as np
-from tqdm import trange, tqdm
-from urllib.parse import urlparse
-import tempfile
+import os
+import time
+from typing import Tuple
+
 import cv2
-from scipy.stats import mode
 import fastremap
-from . import transforms, dynamics, utils, plot, metrics
-
 import torch
-
-#     from GPUtil import showUtilization as gpu_usage #for gpu memory debugging
+from scipy.stats import mode
 from torch import nn
 from torch.utils import mkldnn as mkldnn_utils
-from . import resnet_torch
+from tqdm import tqdm, trange
+
+from cellpose import metrics, resnet_torch, transforms, utils
 
 TORCH_ENABLED = True
 
@@ -106,8 +104,7 @@ class UnetModel:
         gpu=False,
         pretrained_model=False,
         diam_mean=30.0,
-        net_avg=False,
-        device=None,
+        device: torch.device = None,
         residual_on=False,
         style_on=False,
         concatenation=True,
@@ -155,10 +152,9 @@ class UnetModel:
 
     def eval(
         self,
-        x,
+        x: torch.Tensor,
         batch_size=8,
         channels=None,
-        channels_last=False,
         invert=False,
         normalize=True,
         rescale=None,
@@ -268,9 +264,9 @@ class UnetModel:
         flows = []
         masks = []
         if rescale is None:
-            rescale = np.ones(nimg)
+            rescale = torch.ones(nimg)
         elif isinstance(rescale, float):
-            rescale = rescale * np.ones(nimg)
+            rescale = rescale * torch.ones(nimg)
         if nimg > 1:
             iterator = trange(nimg, file=tqdm_out)
         else:
@@ -285,7 +281,7 @@ class UnetModel:
 
         if cell_threshold is None or boundary_threshold is None:
             try:
-                thresholds = np.load(model_path + "_cell_boundary_threshold.npy")
+                thresholds = torch.load(model_path + "_cell_boundary_threshold.npy")
                 cell_threshold, boundary_threshold = thresholds
                 core_logger.info(">>>> found saved thresholds from validation set")
             except:
@@ -349,15 +345,19 @@ class UnetModel:
 
         return masks, flows, styles
 
-    def _to_device(self, x):
-        X = torch.from_numpy(x).float().to(self.device)
+    def _to_device(self, x: torch.Tensor) -> torch.Tensor:
+        X = x.float().to(self.device)
         return X
 
-    def _from_device(self, X):
-        x = X.detach().cpu().numpy()
+    def _from_device(self, X: torch.Tensor) -> torch.Tensor:
+        x = X.detach().cpu()
         return x
 
-    def network(self, x, return_conv=False):
+    def network(
+        self,
+        x: torch.Tensor,
+        return_conv: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """convert imgs to torch and run network model and return numpy"""
         X = self._to_device(x)
         self.net.eval()
@@ -370,13 +370,13 @@ class UnetModel:
         style = self._from_device(style)
         if return_conv:
             conv = self._from_device(conv)
-            y = np.concatenate((y, conv), axis=1)
+            y = torch.concat((y, conv), dim=1)
 
         return y, style
 
     def _run_nets(
         self,
-        img,
+        img: torch.Tensor,
         net_avg=False,
         augment=False,
         tile=True,
@@ -384,7 +384,7 @@ class UnetModel:
         bsize=224,
         return_conv=False,
         progress=None,
-    ):
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """run network (if more than one, loop over networks and average results
 
         Parameters
@@ -453,13 +453,13 @@ class UnetModel:
 
     def _run_net(
         self,
-        imgs,
+        imgs: torch.Tensor,
         augment=False,
         tile=True,
         tile_overlap=0.1,
         bsize=224,
         return_conv=False,
-    ):
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """run network on image or stack of images
 
         (faster if augment is False)
@@ -498,12 +498,12 @@ class UnetModel:
         """
         if imgs.ndim == 4:
             # make image Lz x nchan x Ly x Lx for net
-            imgs = np.transpose(imgs, (0, 3, 1, 2))
+            imgs = torch.permute(imgs, (0, 3, 1, 2))
             detranspose = (0, 2, 3, 1)
             return_conv = False
         else:
             # make image nchan x Ly x Lx for net
-            imgs = np.transpose(imgs, (2, 0, 1))
+            imgs = torch.permute(imgs, (2, 0, 1))
             detranspose = (1, 2, 0)
 
         # pad image for net so Ly and Lx are divisible by 4
@@ -526,7 +526,7 @@ class UnetModel:
                 return_conv=return_conv,
             )
         else:
-            imgs = np.expand_dims(imgs, axis=0)
+            imgs = imgs.unsqueeze(0)
             y, style = self.network(imgs, return_conv=return_conv)
             y, style = y[0], style[0]
         style /= (style**2).sum() ** 0.5
@@ -534,12 +534,17 @@ class UnetModel:
         # slice out padding
         y = y[slc]
         # transpose so channels axis is last again
-        y = np.transpose(y, detranspose)
+        y = y.permute(detranspose)
 
         return y, style
 
     def _run_tiled(
-        self, imgi, augment=False, bsize=224, tile_overlap=0.1, return_conv=False
+        self,
+        imgi: torch.Tensor,
+        augment=False,
+        bsize=224,
+        tile_overlap=0.1,
+        return_conv=False,
     ):
         """run network in tiles of size [bsize x bsize]
 
@@ -580,8 +585,8 @@ class UnetModel:
             )
             ny, nx, nchan, ly, lx = IMG.shape
             batch_size *= max(4, (bsize**2 // (ly * lx)) ** 0.5)
-            yf = np.zeros(
-                (Lz, self.nclasses, imgi.shape[-2], imgi.shape[-1]), np.float32
+            yf = torch.zeros(
+                (Lz, self.nclasses, imgi.shape[-2], imgi.shape[-1]), torch.float32
             )
             styles = []
             if ny * nx > batch_size:
@@ -595,11 +600,11 @@ class UnetModel:
             else:
                 # run multiple slices at the same time
                 ntiles = ny * nx
-                nimgs = max(2, int(np.round(batch_size / ntiles)))
-                niter = int(np.ceil(Lz / nimgs))
+                nimgs = max(2, int(torch.round(batch_size / ntiles)))
+                niter = int(torch.ceil(Lz / nimgs))
                 ziterator = trange(niter, file=tqdm_out)
                 for k in ziterator:
-                    IMGa = np.zeros((ntiles * nimgs, nchan, ly, lx), np.float32)
+                    IMGa = torch.zeros((ntiles * nimgs, nchan, ly, lx), torch.float32)
                     for i in range(min(Lz - k * nimgs, nimgs)):
                         IMG, ysub, xsub, Ly, Lx = transforms.make_tiles(
                             imgi[k * nimgs + i],
@@ -607,35 +612,35 @@ class UnetModel:
                             augment=augment,
                             tile_overlap=tile_overlap,
                         )
-                        IMGa[i * ntiles : (i + 1) * ntiles] = np.reshape(
+                        IMGa[i * ntiles : (i + 1) * ntiles] = torch.reshape(
                             IMG, (ny * nx, nchan, ly, lx)
                         )
                     ya, stylea = self.network(IMGa)
                     for i in range(min(Lz - k * nimgs, nimgs)):
                         y = ya[i * ntiles : (i + 1) * ntiles]
                         if augment:
-                            y = np.reshape(y, (ny, nx, 3, ly, lx))
+                            y = torch.reshape(y, (ny, nx, 3, ly, lx))
                             y = transforms.unaugment_tiles(y, self.unet)
-                            y = np.reshape(y, (-1, 3, ly, lx))
+                            y = torch.reshape(y, (-1, 3, ly, lx))
                         yfi = transforms.average_tiles(y, ysub, xsub, Ly, Lx)
                         yfi = yfi[:, : imgi.shape[2], : imgi.shape[3]]
                         yf[k * nimgs + i] = yfi
                         stylei = stylea[i * ntiles : (i + 1) * ntiles].sum(axis=0)
                         stylei /= (stylei**2).sum() ** 0.5
                         styles.append(stylei)
-            return yf, np.array(styles)
+            return yf, torch.array(styles)
         else:
             IMG, ysub, xsub, Ly, Lx = transforms.make_tiles(
                 imgi, bsize=bsize, augment=augment, tile_overlap=tile_overlap
             )
             ny, nx, nchan, ly, lx = IMG.shape
-            IMG = np.reshape(IMG, (ny * nx, nchan, ly, lx))
+            IMG = torch.reshape(IMG, (ny * nx, nchan, ly, lx))
             batch_size = self.batch_size
-            niter = int(np.ceil(IMG.shape[0] / batch_size))
+            niter = int(torch.ceil(torch.tensor(IMG.shape[0] / batch_size)))
             nout = self.nclasses + 32 * return_conv
-            y = np.zeros((IMG.shape[0], nout, ly, lx))
+            y = torch.zeros((IMG.shape[0], nout, ly, lx))
             for k in range(niter):
-                irange = np.arange(
+                irange = torch.arange(
                     batch_size * k, min(IMG.shape[0], batch_size * k + batch_size)
                 )
                 y0, style = self.network(IMG[irange], return_conv=return_conv)
@@ -647,9 +652,9 @@ class UnetModel:
                 styles += style.sum(axis=0)
             styles /= IMG.shape[0]
             if augment:
-                y = np.reshape(y, (ny, nx, nout, bsize, bsize))
+                y = torch.reshape(y, (ny, nx, nout, bsize, bsize))
                 y = transforms.unaugment_tiles(y, self.unet)
-                y = np.reshape(y, (-1, nout, bsize, bsize))
+                y = torch.reshape(y, (-1, nout, bsize, bsize))
 
             yf = transforms.average_tiles(y, ysub, xsub, Ly, Lx)
             yf = yf[:, : imgi.shape[1], : imgi.shape[2]]
@@ -721,8 +726,9 @@ class UnetModel:
             rescaling = [rsz] * 3
         pm = [(0, 1, 2, 3), (1, 0, 2, 3), (2, 0, 1, 3)]
         ipm = [(3, 0, 1, 2), (3, 1, 0, 2), (3, 1, 2, 0)]
-        yf = np.zeros(
-            (3, self.nclasses, imgs.shape[0], imgs.shape[1], imgs.shape[2]), np.float32
+        yf = torch.zeros(
+            (3, self.nclasses, imgs.shape[0], imgs.shape[1], imgs.shape[2]),
+            torch.float32,
         )
         for p in range(3 - 2 * self.unet):
             xsl = imgs.copy().transpose(pm[p])
@@ -804,14 +810,14 @@ class UnetModel:
         if self.nclasses == 3:
             core_logger.info("computing boundary pixels for training data")
             train_classes = [
-                np.stack(
+                torch.stack(
                     (label, label > 0, utils.distance_to_boundary(label)), axis=0
-                ).astype(np.float32)
+                ).astype(torch.float32)
                 for label in tqdm(train_labels, file=tqdm_out)
             ]
         else:
             train_classes = [
-                np.stack((label, label > 0), axis=0).astype(np.float32)
+                torch.stack((label, label > 0), axis=0).astype(torch.float32)
                 for label in tqdm(train_labels, file=tqdm_out)
             ]
         if run_test:
@@ -821,26 +827,26 @@ class UnetModel:
             if self.nclasses == 3:
                 core_logger.info("computing boundary pixels for test data")
                 test_classes = [
-                    np.stack(
+                    torch.stack(
                         (label, label > 0, utils.distance_to_boundary(label)), axis=0
-                    ).astype(np.float32)
+                    ).astype(torch.float32)
                     for label in tqdm(test_labels, file=tqdm_out)
                 ]
             else:
                 test_classes = [
-                    np.stack((label, label > 0), axis=0).astype(np.float32)
+                    torch.stack((label, label > 0), axis=0).astype(torch.float32)
                     for label in tqdm(test_labels, file=tqdm_out)
                 ]
         else:
             test_classes = None
 
-        nmasks = np.array([label[0].max() - 1 for label in train_classes])
+        nmasks = torch.array([label[0].max() - 1 for label in train_classes])
         nremove = (nmasks < min_train_masks).sum()
         if nremove > 0:
             core_logger.warning(
                 f"{nremove} train images with number of masks less than min_train_masks ({min_train_masks}), removing from train set"
             )
-            ikeep = np.nonzero(nmasks >= min_train_masks)[0]
+            ikeep = torch.nonzero(nmasks >= min_train_masks)[0]
             train_data = [train_data[i] for i in ikeep]
             train_classes = [train_classes[i] for i in ikeep]
             train_labels = [train_labels[i] for i in ikeep]
@@ -874,19 +880,19 @@ class UnetModel:
         cell_threshold, boundary_threshold = self.threshold_validation(
             val_data, val_labels
         )
-        np.save(
+        torch.save(
             model_path + "_cell_boundary_threshold.npy",
-            np.array([cell_threshold, boundary_threshold]),
+            torch.array([cell_threshold, boundary_threshold]),
         )
         return model_path
 
     def threshold_validation(self, val_data, val_labels):
-        cell_thresholds = np.arange(-4.0, 4.25, 0.5)
+        cell_thresholds = torch.arange(-4.0, 4.25, 0.5)
         if self.nclasses == 3:
-            boundary_thresholds = np.arange(-2, 2.25, 1.0)
+            boundary_thresholds = torch.arange(-2, 2.25, 1.0)
         else:
-            boundary_thresholds = np.zeros(1)
-        aps = np.zeros((cell_thresholds.size, boundary_thresholds.size, 3))
+            boundary_thresholds = torch.zeros(1)
+        aps = torch.zeros((cell_thresholds.size, boundary_thresholds.size, 3))
         for j, cell_threshold in enumerate(cell_thresholds):
             for k, boundary_threshold in enumerate(boundary_thresholds):
                 masks = []
@@ -911,7 +917,9 @@ class UnetModel:
                     )
                 )
         if self.nclasses == 3:
-            jbest, kbest = np.unravel_index(aps.mean(axis=-1).argmax(), aps.shape[:2])
+            jbest, kbest = torch.unravel_index(
+                aps.mean(axis=-1).argmax(), aps.shape[:2]
+            )
         else:
             jbest = aps.squeeze().mean(axis=-1).argmax()
             kbest = 0
@@ -1009,12 +1017,12 @@ class UnetModel:
         d = datetime.datetime.now()
 
         self.n_epochs = n_epochs
-        if isinstance(learning_rate, (list, np.ndarray)):
-            if isinstance(learning_rate, np.ndarray) and learning_rate.ndim > 1:
+        if isinstance(learning_rate, (list, torch.ndarray)):
+            if isinstance(learning_rate, torch.ndarray) and learning_rate.ndim > 1:
                 raise ValueError("learning_rate.ndim must equal 1")
             elif len(learning_rate) != n_epochs:
                 raise ValueError(
-                    "if learning_rate given as list or np.ndarray it must have length n_epochs"
+                    "if learning_rate given as list or torch.ndarray it must have length n_epochs"
                 )
             self.learning_rate = learning_rate
             self.learning_rate_const = mode(learning_rate)[0][0]
@@ -1022,20 +1030,21 @@ class UnetModel:
             self.learning_rate_const = learning_rate
             # set learning rate schedule
             if SGD:
-                LR = np.linspace(0, self.learning_rate_const, 10)
+                LR = torch.linspace(0, self.learning_rate_const, 10)
                 if self.n_epochs > 250:
-                    LR = np.append(
-                        LR, self.learning_rate_const * np.ones(self.n_epochs - 100)
+                    LR = torch.append(
+                        LR, self.learning_rate_const * torch.ones(self.n_epochs - 100)
                     )
                     for i in range(10):
-                        LR = np.append(LR, LR[-1] / 2 * np.ones(10))
+                        LR = torch.append(LR, LR[-1] / 2 * torch.ones(10))
                 else:
-                    LR = np.append(
+                    LR = torch.append(
                         LR,
-                        self.learning_rate_const * np.ones(max(0, self.n_epochs - 10)),
+                        self.learning_rate_const
+                        * torch.ones(max(0, self.n_epochs - 10)),
                     )
             else:
-                LR = self.learning_rate_const * np.ones(self.n_epochs)
+                LR = self.learning_rate_const * torch.ones(self.n_epochs)
             self.learning_rate = LR
 
         self.batch_size = batch_size
@@ -1045,7 +1054,7 @@ class UnetModel:
         nimg = len(train_data)
 
         # compute average cell diameter
-        diam_train = np.array(
+        diam_train = torch.array(
             [utils.diameters(train_labels[k][0])[0] for k in range(len(train_labels))]
         )
         diam_train_mean = diam_train[diam_train > 0].mean()
@@ -1053,7 +1062,7 @@ class UnetModel:
         if rescale:
             diam_train[diam_train < 5] = 5.0
             if test_data is not None:
-                diam_test = np.array(
+                diam_test = torch.array(
                     [
                         utils.diameters(test_labels[k][0])[0]
                         for k in range(len(test_labels))
@@ -1102,26 +1111,26 @@ class UnetModel:
         self.net.mkldnn = False
 
         # get indices for each epoch for training
-        np.random.seed(0)
-        inds_all = np.zeros((0,), "int32")
+        torch.random.seed(0)
+        inds_all = torch.zeros((0,), "int32")
         if nimg_per_epoch is None or nimg > nimg_per_epoch:
             nimg_per_epoch = nimg
         core_logger.info(f">>>> nimg_per_epoch = {nimg_per_epoch}")
         while len(inds_all) < n_epochs * nimg_per_epoch:
-            rperm = np.random.permutation(nimg)
-            inds_all = np.hstack((inds_all, rperm))
+            rperm = torch.random.permutation(nimg)
+            inds_all = torch.hstack((inds_all, rperm))
 
         for iepoch in range(self.n_epochs):
             if SGD:
                 self._set_learning_rate(self.learning_rate[iepoch])
-            np.random.seed(iepoch)
+            torch.random.seed(iepoch)
             rperm = inds_all[iepoch * nimg_per_epoch : (iepoch + 1) * nimg_per_epoch]
             for ibatch in range(0, nimg_per_epoch, batch_size):
                 inds = rperm[ibatch : ibatch + batch_size]
                 rsc = (
                     diam_train[inds] / self.diam_mean
                     if rescale
-                    else np.ones(len(inds), np.float32)
+                    else torch.ones(len(inds), torch.float32)
                 )
                 # now passing in the full train array, need the labels for distance field
                 imgi, lbl, scale = transforms.random_rotate_and_resize(
@@ -1133,8 +1142,8 @@ class UnetModel:
                 )
                 if self.unet and lbl.shape[1] > 1 and rescale:
                     lbl[:, 1] *= (
-                        scale[:, np.newaxis, np.newaxis] ** 2
-                    )  # diam_batch[:,np.newaxis,np.newaxis]**2
+                        scale[:, torch.newaxis, torch.newaxis] ** 2
+                    )  # diam_batch[:,torch.newaxis,torch.newaxis]**2
                 train_loss = self._train_step(imgi, lbl)
                 lavg += train_loss
                 nsum += len(imgi)
@@ -1143,14 +1152,14 @@ class UnetModel:
                 lavg = lavg / nsum
                 if test_data is not None:
                     lavgt, nsum = 0.0, 0
-                    np.random.seed(42)
-                    rperm = np.arange(0, len(test_data), 1, int)
+                    torch.random.seed(42)
+                    rperm = torch.arange(0, len(test_data), 1, int)
                     for ibatch in range(0, len(test_data), batch_size):
                         inds = rperm[ibatch : ibatch + batch_size]
                         rsc = (
                             diam_test[inds] / self.diam_mean
                             if rescale
-                            else np.ones(len(inds), np.float32)
+                            else torch.ones(len(inds), torch.float32)
                         )
                         imgi, lbl, scale = transforms.random_rotate_and_resize(
                             [test_data[i] for i in inds],
@@ -1160,7 +1169,7 @@ class UnetModel:
                             unet=self.unet,
                         )
                         if self.unet and lbl.shape[1] > 1 and rescale:
-                            lbl[:, 1] *= scale[:, np.newaxis, np.newaxis] ** 2
+                            lbl[:, 1] *= scale[:, torch.newaxis, torch.newaxis] ** 2
 
                         test_loss = self._test_eval(imgi, lbl)
                         lavgt += test_loss
