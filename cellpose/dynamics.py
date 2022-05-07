@@ -1,10 +1,13 @@
+from lib2to3.pgen2.token import OP
 import logging
 import os
+from typing import List, Optional, Tuple
 
 import cv2
 import fastremap
 from numba import njit
 import numpy as np
+import numpy.typing as npt
 import scipy.ndimage
 from scipy.ndimage import maximum_filter1d
 import tifffile
@@ -102,7 +105,10 @@ def _extend_centers_gpu(
     return mu_torch
 
 
-def masks_to_flows_gpu(masks, device=None):
+def masks_to_flows_gpu(
+    masks: npt.NDArray,
+    device: Optional[torch.device] = None,
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """convert masks to flows using diffusion from center pixel
     Center of masks where diffusion starts is defined using COM
     Parameters
@@ -174,7 +180,10 @@ def masks_to_flows_gpu(masks, device=None):
     return mu0, mu_c
 
 
-def masks_to_flows_cpu(masks, device=None):
+def masks_to_flows_cpu(
+    masks: npt.NDArray,
+    device: Optional[torch.device] = None,
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """convert masks to flows using diffusion from center pixel
     Center of masks where diffusion starts is defined to be the
     closest pixel to the median of all pixels that is inside the
@@ -232,7 +241,11 @@ def masks_to_flows_cpu(masks, device=None):
     return mu, mu_c
 
 
-def masks_to_flows(masks, use_gpu=False, device=None):
+def masks_to_flows(
+    masks: npt.NDArray,
+    use_gpu: bool = False,
+    device: Optional[torch.device] = None,
+) -> npt.NDArray:
     """convert masks to flows using diffusion from center pixel
 
     Center of masks where diffusion starts is defined to be the
@@ -252,11 +265,6 @@ def masks_to_flows(masks, use_gpu=False, device=None):
     mu: float, 3D or 4D array
         flows in Y = mu[-2], flows in X = mu[-1].
         if masks are 3D, flows in Z = mu[0].
-
-    mu_c: float, 2D or 3D array
-        for each pixel, the distance to the center of the mask
-        in which it resides
-
     """
     if masks.max() == 0:
         dynamics_logger.warning("empty masks!")
@@ -292,7 +300,13 @@ def masks_to_flows(masks, use_gpu=False, device=None):
         raise ValueError("masks_to_flows only takes 2D or 3D arrays")
 
 
-def labels_to_flows(labels, files=None, use_gpu=False, device=None, redo_flows=False):
+def labels_to_flows(
+    labels: List[npt.NDArray],
+    files: Optional[List[str]] = None,
+    use_gpu: bool = False,
+    device: Optional[torch.device] = None,
+    redo_flows: bool = False,
+) -> List[npt.NDArray]:
     """convert labels (list of masks or flows) to flows for training model
 
     if files is not None, flows are saved to files to be reused
@@ -389,7 +403,13 @@ def map_coordinates(I, yc, xc, Y):
             )
 
 
-def steps2D_interp(p, dP, niter, use_gpu=False, device=None):
+def steps2D_interp(
+    p: npt.NDArray,
+    dP: npt.NDArray,
+    niter: np.number,
+    use_gpu: bool = False,
+    device: Optional[torch.device] = None,
+) -> npt.NDArray:
     shape = dP.shape[1:]
     if use_gpu:
         if device is None:
@@ -522,7 +542,13 @@ def steps2D(p, dP, inds, niter):
     return p
 
 
-def follow_flows(dP, mask=None, niter=200, interp=True, use_gpu=True, device=None):
+def follow_flows(
+    dP: npt.NDArray,
+    niter: np.number = 200,
+    interp: bool = True,
+    use_gpu: bool = True,
+    device: Optional[torch.device] = None,
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """define pixels and run dynamics to recover masks in 2D
 
     Pixels are meshgrid. Only pixels with non-zero cell-probability
@@ -589,7 +615,13 @@ def follow_flows(dP, mask=None, niter=200, interp=True, use_gpu=True, device=Non
     return p, inds
 
 
-def remove_bad_flow_masks(masks, flows, threshold=0.4, use_gpu=False, device=None):
+def remove_bad_flow_masks(
+    masks: npt.NDArray,
+    flows: npt.NDArray,
+    threshold: float = 0.4,
+    use_gpu: bool = False,
+    device: Optional[torch.device] = None,
+) -> npt.NDArray:
     """remove masks which have inconsistent flows
 
     Uses metrics.flow_error to compute flows from predicted masks
@@ -624,7 +656,7 @@ def remove_bad_flow_masks(masks, flows, threshold=0.4, use_gpu=False, device=Non
     return masks
 
 
-def get_masks(p, iscell=None, rpad=20):
+def get_masks(p: npt.NDArray, iscell=None, rpad: int = 20):
     """create masks using pixel convergence after running dynamics
 
     Makes a histogram of final pixel locations p, initializes masks

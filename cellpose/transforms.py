@@ -1,13 +1,15 @@
 import logging
+from typing import List, Tuple
 import warnings
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 
 transforms_logger = logging.getLogger(__name__)
 
 
-def _taper_mask(ly=224, lx=224, sig=7.5):
+def _taper_mask(ly: int = 224, lx: int = 224, sig: float = 7.5) -> npt.NDArray:
     bsize = max(224, max(ly, lx))
     xm = np.arange(bsize)
     xm = np.abs(xm - xm.mean())
@@ -20,7 +22,7 @@ def _taper_mask(ly=224, lx=224, sig=7.5):
     return mask
 
 
-def unaugment_tiles(y, unet=False):
+def unaugment_tiles(y: npt.NDArray, unet: bool = False) -> npt.NDArray:
     """reverse test-time augmentations for averaging
 
     Parameters
@@ -56,7 +58,9 @@ def unaugment_tiles(y, unet=False):
     return y
 
 
-def average_tiles(y, ysub, xsub, Ly, Lx):
+def average_tiles(
+    y: npt.NDArray, ysub: List[npt.NDArray], xsub: List[npt.NDArray], Ly: int, Lx: int
+) -> npt.NDArray:
     """average results of network over tiles
 
     Parameters
@@ -97,7 +101,12 @@ def average_tiles(y, ysub, xsub, Ly, Lx):
     return yf
 
 
-def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
+def make_tiles(
+    imgi: npt.NDArray,
+    bsize: int = 224,
+    augment: bool = False,
+    tile_overlap: float = 0.1,
+) -> Tuple[npt.NDArray, List[npt.NDArray], List[npt.NDArray], int, int]:
     """make tiles of image to run at test-time
 
     if augmented, tiles are flipped and tile_overlap=2.
@@ -130,10 +139,7 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
 
     xsub : list
         list of arrays with start and end of tiles in X of length ntiles
-
-
     """
-
     nchan, Ly, Lx = imgi.shape
     if augment:
         bsize = np.int32(bsize)
@@ -185,8 +191,8 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
         IMG = np.zeros((len(ystart), len(xstart), nchan, bsizeY, bsizeX), np.float32)
         for j in range(len(ystart)):
             for i in range(len(xstart)):
-                ysub.append([ystart[j], ystart[j] + bsizeY])
-                xsub.append([xstart[i], xstart[i] + bsizeX])
+                ysub.append(np.array([ystart[j], ystart[j] + bsizeY]))
+                xsub.append(np.array([xstart[i], xstart[i] + bsizeX]))
                 IMG[j, i] = imgi[
                     :, ysub[-1][0] : ysub[-1][1], xsub[-1][0] : xsub[-1][1]
                 ]
@@ -194,7 +200,7 @@ def make_tiles(imgi, bsize=224, augment=False, tile_overlap=0.1):
     return IMG, ysub, xsub, Ly, Lx
 
 
-def normalize99(Y, lower=1, upper=99):
+def normalize99(Y: npt.NDArray, lower: int = 1, upper: int = 99) -> npt.NDArray:
     """normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile"""
     X = Y.copy()
     x01 = np.percentile(X, lower)
@@ -253,15 +259,15 @@ def update_axis(m_axis, to_squeeze, ndim):
 
 
 def convert_image(
-    x,
-    channels,
-    channel_axis=None,
-    z_axis=None,
-    do_3D=False,
-    normalize=True,
-    invert=False,
-    nchan=2,
-):
+    x: npt.NDArray,
+    channels: List[int],
+    channel_axis: int = None,
+    z_axis: int = None,
+    do_3D: bool = False,
+    normalize: bool = True,
+    invert: bool = False,
+    nchan: int = 2,
+) -> npt.NDArray:
     """return image with z first, channels last and normalized intensities"""
 
     # squeeze image, and if channel_axis or z_axis given, transpose image
@@ -342,7 +348,11 @@ def convert_image(
     return x
 
 
-def reshape(data, channels=[0, 0], chan_first=False):
+def reshape(
+    data: npt.NDArray,
+    channels: List[int] = [0, 0],
+    chan_first: bool = False,
+) -> npt.NDArray:
     """reshape data using channels
 
     Parameters
@@ -401,7 +411,11 @@ def reshape(data, channels=[0, 0], chan_first=False):
     return data
 
 
-def normalize_img(img, axis=-1, invert=False):
+def normalize_img(
+    img: npt.NDArray,
+    axis: int = -1,
+    invert: bool = False,
+) -> npt.NDArray:
     """normalize each channel of the image so that so that 0.0=1st percentile
     and 1.0=99th percentile of image intensities
 
