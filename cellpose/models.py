@@ -1,36 +1,25 @@
-import datetime
 import logging
 import os
 import pathlib
-from pathlib import Path
-import shutil
-import subprocess
-import sys
-import tempfile
 import time
-from urllib.parse import urlparse
-
-import numpy as np
-import torch
-from tqdm import tqdm
-from tqdm import trange
-
-models_logger = logging.getLogger(__name__)
-
 from typing import Any, List, Optional, Tuple, Union
 
 from numpy import float32
 from numpy import float64
 from numpy import ndarray
+import numpy as np
+import torch
+from tqdm import trange
 
-from . import dynamics
-from . import plot
-from . import transforms
-from . import utils
-from .core import assign_device
-from .core import check_mkl
-from .core import parse_model_string
-from .core import UnetModel
+from cellpose import dynamics
+from cellpose import plot
+from cellpose import transforms
+from cellpose import utils
+from cellpose.core import assign_device
+from cellpose.core import parse_model_string
+from cellpose.core import UnetModel
+
+models_logger = logging.getLogger(__name__)
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")

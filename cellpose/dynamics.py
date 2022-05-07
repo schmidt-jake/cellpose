@@ -1,35 +1,25 @@
 import logging
 import os
-import time
+from typing import List, Optional, Tuple, Union
 
 import cv2
 import fastremap
-from numba import float32
-from numba import int32
 from numba import njit
-from numba import vectorize
+from numpy import float64
+from numpy import ndarray
+from numpy import uint32
 import numpy as np
 import scipy.ndimage
-from scipy.ndimage.filters import maximum_filter1d
+from scipy.ndimage import maximum_filter1d
 import tifffile
 import torch
 from tqdm import trange
 
+from cellpose import metrics
+from cellpose import transforms
+from cellpose import utils
+
 dynamics_logger = logging.getLogger(__name__)
-
-from typing import List, Optional, Tuple, Union
-
-from numpy import float64
-from numpy import ndarray
-from numpy import uint32
-import torch
-from torch import nn
-from torch import optim
-
-from . import metrics
-from . import resnet_torch
-from . import transforms
-from . import utils
 
 TORCH_ENABLED = True
 torch_GPU = torch.device("cuda")

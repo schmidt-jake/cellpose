@@ -1,14 +1,8 @@
 import datetime
 import logging
 import os
-import pathlib
-import shutil
-import subprocess
-import sys
-import tempfile
 import time
 from typing import Optional, Tuple
-from urllib.parse import urlparse
 
 import cv2
 import fastremap
@@ -17,19 +11,15 @@ from numpy import ndarray
 import numpy as np
 from scipy.stats import mode
 import torch
-
-#     from GPUtil import showUtilization as gpu_usage #for gpu memory debugging
 from torch import nn
 from torch.utils import mkldnn as mkldnn_utils
 from tqdm import tqdm
 from tqdm import trange
 
-from . import dynamics
-from . import metrics
-from . import plot
-from . import resnet_torch
-from . import transforms
-from . import utils
+from cellpose import metrics
+from cellpose import resnet_torch
+from cellpose import transforms
+from cellpose import utils
 
 TORCH_ENABLED = True
 

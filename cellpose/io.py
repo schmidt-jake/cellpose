@@ -1,5 +1,4 @@
 import datetime
-import gc
 import glob
 import logging
 import os
@@ -15,10 +14,7 @@ import tifffile
 from tqdm import tqdm
 
 try:
-    from PyQt5 import Qt
-    from PyQt5 import QtCore
-    from PyQt5 import QtGui
-    from PyQt5 import QtWidgets
+
     from PyQt5.QtWidgets import QMessageBox
 
     GUI = True

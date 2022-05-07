@@ -1,12 +1,7 @@
 import argparse
-import glob
 import os
-import pathlib
-import subprocess
-import sys
 import time
 
-from natsort import natsorted
 import numpy as np
 from tqdm import tqdm
 

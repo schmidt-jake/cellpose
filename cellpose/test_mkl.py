@@ -1,8 +1,4 @@
 import os
-import sys
-
-os.environ["MKLDNN_VERBOSE"] = "1"
-import time
 
 import numpy as np
 
@@ -13,6 +9,8 @@ try:
     MXNET_ENABLED = True
 except:
     MXNET_ENABLED = False
+
+os.environ["MKLDNN_VERBOSE"] = "1"
 
 
 def test_mkl():
