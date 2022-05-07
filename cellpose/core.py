@@ -2,10 +2,12 @@ import datetime
 import logging
 import os
 import time
+from typing import List, Optional, Tuple
 
 import cv2
 import fastremap
 import numpy as np
+import numpy.typing as npt
 from scipy.stats import mode
 import torch
 from torch import nn
@@ -63,7 +65,7 @@ def use_gpu(gpu_number=0, use_torch=True):
         raise ValueError("cellpose only runs with pytorch now")
 
 
-def _use_gpu_torch(gpu_number=0):
+def _use_gpu_torch(gpu_number: int = 0):
     try:
         device = torch.device("cuda:" + str(gpu_number))
         _ = torch.zeros([1, 2, 3]).to(device)
@@ -74,7 +76,7 @@ def _use_gpu_torch(gpu_number=0):
         return False
 
 
-def assign_device(use_torch=True, gpu=False, device=0):
+def assign_device(gpu: bool = False, device: int = 0):
     if gpu and use_gpu(use_torch=True):
         device = torch.device(f"cuda:{device}")
         gpu = True
@@ -86,7 +88,7 @@ def assign_device(use_torch=True, gpu=False, device=0):
     return device, gpu
 
 
-def check_mkl(use_torch=True):
+def check_mkl() -> bool:
     # core_logger.info('Running test snippet to check if MKL-DNN working')
     mkl_enabled = torch.backends.mkldnn.is_available()
     if mkl_enabled:
@@ -105,16 +107,15 @@ def check_mkl(use_torch=True):
 class UnetModel:
     def __init__(
         self,
-        gpu=False,
-        pretrained_model=False,
-        diam_mean=30.0,
-        net_avg=False,
-        device=None,
-        residual_on=False,
-        style_on=False,
-        concatenation=True,
-        nclasses=3,
-        nchan=2,
+        gpu: bool = False,
+        pretrained_model: bool = False,
+        diam_mean: float = 30.0,
+        device: Optional[torch.device] = None,
+        residual_on: bool = False,
+        style_on: bool = False,
+        concatenation: bool = True,
+        nclasses: int = 3,
+        nchan: int = 2,
     ):
         self.unet = True
         self.torch = True
@@ -126,7 +127,7 @@ class UnetModel:
             device_gpu = self.device.type == "cuda"
         self.gpu = gpu if device is None else device_gpu
         if not self.gpu:
-            self.mkldnn = check_mkl(True)
+            self.mkldnn = check_mkl()
         self.pretrained_model = pretrained_model
         self.diam_mean = diam_mean
 
@@ -157,26 +158,29 @@ class UnetModel:
 
     def eval(
         self,
-        x,
-        batch_size=8,
-        channels=None,
-        channels_last=False,
-        invert=False,
-        normalize=True,
-        rescale=None,
-        do_3D=False,
-        anisotropy=None,
-        net_avg=False,
-        augment=False,
-        channel_axis=None,
-        z_axis=None,
-        nolist=False,
-        tile=True,
-        cell_threshold=None,
-        boundary_threshold=None,
-        min_size=15,
-        compute_masks=True,
-    ):
+        x: npt.NDArray,
+        batch_size: int = 8,
+        channels: List[int] = None,
+        invert: bool = False,
+        normalize: bool = True,
+        rescale: Optional[float] = None,
+        do_3D: bool = False,
+        anisotropy: Optional[float] = None,
+        net_avg: bool = False,
+        augment: bool = False,
+        channel_axis: int = None,
+        z_axis: int = None,
+        nolist: bool = False,
+        tile: bool = True,
+        cell_threshold: Optional[float] = None,
+        boundary_threshold: Optional[float] = None,
+        min_size: int = 15,
+        compute_masks: bool = True,
+    ) -> Tuple[
+        List[npt.NDArray[np.float32]],
+        List[npt.NDArray[np.float32]],
+        List[npt.NDArray[np.float32]],
+    ]:
         """segment list of images x
 
         Parameters
@@ -351,15 +355,19 @@ class UnetModel:
 
         return masks, flows, styles
 
-    def _to_device(self, x):
+    def _to_device(self, x: npt.NDArray) -> torch.Tensor:
         X = torch.from_numpy(x).float().to(self.device)
         return X
 
-    def _from_device(self, X):
+    def _from_device(self, X: torch.Tensor) -> npt.NDArray:
         x = X.detach().cpu().numpy()
         return x
 
-    def network(self, x, return_conv=False):
+    def network(
+        self,
+        x: npt.NDArray[np.float32],
+        return_conv: bool = False,
+    ) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
         """convert imgs to torch and run network model and return numpy"""
         X = self._to_device(x)
         self.net.eval()
@@ -378,15 +386,15 @@ class UnetModel:
 
     def _run_nets(
         self,
-        img,
-        net_avg=False,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        bsize=224,
-        return_conv=False,
+        img: npt.NDArray[np.float32],
+        net_avg: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        bsize: int = 224,
+        return_conv: bool = False,
         progress=None,
-    ):
+    ) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
         """run network (if more than one, loop over networks and average results
 
         Parameters
@@ -455,13 +463,13 @@ class UnetModel:
 
     def _run_net(
         self,
-        imgs,
-        augment=False,
-        tile=True,
-        tile_overlap=0.1,
-        bsize=224,
-        return_conv=False,
-    ):
+        imgs: npt.NDArray[np.float32],
+        augment: bool = False,
+        tile: bool = True,
+        tile_overlap: float = 0.1,
+        bsize: int = 224,
+        return_conv: bool = False,
+    ) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
         """run network on image or stack of images
 
         (faster if augment is False)
@@ -541,8 +549,13 @@ class UnetModel:
         return y, style
 
     def _run_tiled(
-        self, imgi, augment=False, bsize=224, tile_overlap=0.1, return_conv=False
-    ):
+        self,
+        imgi: npt.NDArray[np.float32],
+        augment: bool = False,
+        bsize: int = 224,
+        tile_overlap: float = 0.1,
+        return_conv: bool = False,
+    ) -> Tuple[npt.NDArray[np.float32], npt.NDArray[np.float32]]:
         """run network in tiles of size [bsize x bsize]
 
         First image is split into overlapping tiles of size [bsize x bsize].

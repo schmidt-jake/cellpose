@@ -2,7 +2,7 @@ import logging
 import os
 import pathlib
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -133,9 +133,7 @@ class Cellpose(object):
 
         # size model not used for bacterial model
         self.pretrained_size = size_model_path(model_type)
-        self.sz = SizeModel(
-            device=self.device, pretrained_size=self.pretrained_size, cp_model=self.cp
-        )
+        self.sz = SizeModel(pretrained_size=self.pretrained_size, cp_model=self.cp)
         self.sz.model_type = model_type
 
     def eval(
@@ -163,7 +161,7 @@ class Cellpose(object):
         rescale: Optional[float] = None,
         progress=None,
         model_loaded: bool = False,
-    ):
+    ) -> Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray, np.float64]:
         """run cellpose and get masks
 
         Parameters
@@ -448,7 +446,6 @@ class CellposeModel(UnetModel):
             gpu=gpu,
             pretrained_model=False,
             diam_mean=self.diam_mean,
-            net_avg=net_avg,
             device=device,
             residual_on=residual_on,
             style_on=style_on,
@@ -1019,7 +1016,7 @@ class CellposeModel(UnetModel):
         return model_path
 
 
-class SizeModel:
+class SizeModel(object):
     """linear regression model for determining the size of objects in image
     used to rescale before input to cp_model
     uses styles from cp_model
@@ -1040,9 +1037,8 @@ class SizeModel:
 
     """
 
-    def __init__(self, cp_model, device=None, pretrained_size=None, **kwargs):
-        super(SizeModel, self).__init__(**kwargs)
-
+    def __init__(self, cp_model: CellposeModel, pretrained_size: Optional[str] = None):
+        super().__init__()
         self.pretrained_size = pretrained_size
         self.cp = cp_model
         self.device = self.cp.device
@@ -1060,17 +1056,16 @@ class SizeModel:
 
     def eval(
         self,
-        x,
-        channels=None,
-        channel_axis=None,
-        normalize=True,
-        invert=False,
-        augment=False,
-        tile=True,
-        batch_size=8,
+        x: npt.NDArray,
+        channels: List[int] = None,
+        channel_axis: int = None,
+        normalize: bool = True,
+        invert: bool = False,
+        augment: bool = False,
+        tile: bool = True,
+        batch_size: int = 8,
         progress=None,
-        interp=True,
-    ):
+    ) -> Tuple[np.float64, np.float64]:
         """use images x to produce style or use style input to predict size of objects in image
 
         Object size estimation is done in two steps:
@@ -1197,7 +1192,10 @@ class SizeModel:
         diam = self.diam_mean if (diam == 0 or np.isnan(diam)) else diam
         return diam, diam_style
 
-    def _size_estimation(self, style):
+    def _size_estimation(
+        self,
+        style: npt.NDArray[np.float32],
+    ) -> np.float64:
         """linear regression from style to size
 
         sizes were estimated using "diameters" from square estimates not circles;

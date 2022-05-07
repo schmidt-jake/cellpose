@@ -6,7 +6,7 @@ import fastremap
 from numba import njit
 import numpy as np
 import scipy.ndimage
-from scipy.ndimage.filters import maximum_filter1d
+from scipy.ndimage import maximum_filter1d
 import tifffile
 import torch
 from tqdm import trange
