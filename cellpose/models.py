@@ -138,7 +138,7 @@ class Cellpose(object):
 
     def eval(
         self,
-        x: npt.NDArray,
+        x: npt.NDArray[np.uint8],
         batch_size: int = 8,
         channels: List[int] = None,
         channel_axis: int = None,
@@ -259,7 +259,6 @@ class Cellpose(object):
         diams: list of diameters, or float (if do_3D=True)
 
         """
-
         tic0 = time.time()
         channels = (
             [0, 0] if channels is None else channels
@@ -334,7 +333,6 @@ class Cellpose(object):
             model_loaded=model_loaded,
         )
         models_logger.info(">>>> TOTAL TIME %0.2f sec" % (time.time() - tic0))
-
         return masks, flows, styles, diams
 
 
@@ -474,7 +472,7 @@ class CellposeModel(UnetModel):
 
     def eval(
         self,
-        x: npt.NDArray,
+        x: npt.NDArray[np.uint8],
         batch_size: int = 8,
         channels: List[int] = None,
         channel_axis: int = None,
@@ -499,7 +497,7 @@ class CellposeModel(UnetModel):
         progress=None,
         loop_run: bool = False,
         model_loaded: bool = False,
-    ):
+    ) -> Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray]:
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
 
@@ -605,7 +603,6 @@ class CellposeModel(UnetModel):
             style vector summarizing each image, also used to estimate size of objects in image
 
         """
-
         if isinstance(x, list) or x.squeeze().ndim == 5:
             masks, styles, flows = [], [], []
             tqdm_out = utils.TqdmToLogger(models_logger, level=logging.INFO)
@@ -709,7 +706,7 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x: npt.NDArray,
+        x: npt.NDArray[np.float32],
         compute_masks: bool = True,
         normalize: bool = True,
         invert: bool = False,
@@ -726,8 +723,7 @@ class CellposeModel(UnetModel):
         anisotropy: Optional[float] = 1.0,
         do_3D: bool = False,
         stitch_threshold: float = 0.0,
-    ):
-
+    ) -> Tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
         tic = time.time()
         shape = x.shape
         nimg = shape[0]
@@ -1056,7 +1052,7 @@ class SizeModel(object):
 
     def eval(
         self,
-        x: npt.NDArray,
+        x: npt.NDArray[np.float32],
         channels: List[int] = None,
         channel_axis: int = None,
         normalize: bool = True,
