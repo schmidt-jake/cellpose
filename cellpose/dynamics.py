@@ -5,9 +5,6 @@ from typing import List, Optional, Tuple, Union
 import cv2
 import fastremap
 from numba import njit
-from numpy import float64
-from numpy import ndarray
-from numpy import uint32
 import numpy as np
 import numpy.typing as npt
 import scipy.ndimage
@@ -180,8 +177,9 @@ def masks_to_flows_gpu(masks, device=None):
 
 
 def masks_to_flows_cpu(
-    masks: npt.NDArray, device: Optional[torch.device] = None
-) -> Tuple[ndarray, ndarray]:
+    masks: npt.NDArray,
+    device: Optional[torch.device] = None,
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """convert masks to flows using diffusion from center pixel
     Center of masks where diffusion starts is defined to be the
     closest pixel to the median of all pixels that is inside the
@@ -240,8 +238,10 @@ def masks_to_flows_cpu(
 
 
 def masks_to_flows(
-    masks: npt.NDArray, use_gpu: bool = False, device: Optional[torch.device] = None
-) -> ndarray:
+    masks: npt.NDArray,
+    use_gpu: bool = False,
+    device: Optional[torch.device] = None,
+) -> npt.NDArray:
     """convert masks to flows using diffusion from center pixel
 
     Center of masks where diffusion starts is defined to be the
@@ -401,10 +401,10 @@ def map_coordinates(I, yc, xc, Y):
 def steps2D_interp(
     p: npt.NDArray,
     dP: npt.NDArray,
-    niter: uint32,
+    niter: np.uint32,
     use_gpu: bool = False,
     device: Optional[torch.device] = None,
-) -> ndarray:
+) -> npt.NDArray:
     shape = dP.shape[1:]
     if use_gpu:
         if device is None:
@@ -540,11 +540,11 @@ def steps2D(p, dP, inds, niter):
 def follow_flows(
     dP: npt.NDArray,
     mask: None = None,
-    niter: float64 = 200,
+    niter: np.float64 = 200,
     interp: bool = True,
     use_gpu: bool = True,
     device: Optional[torch.device] = None,
-) -> Tuple[ndarray, ndarray]:
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """define pixels and run dynamics to recover masks in 2D
 
     Pixels are meshgrid. Only pixels with non-zero cell-probability
@@ -617,7 +617,7 @@ def remove_bad_flow_masks(
     threshold: float = 0.4,
     use_gpu: bool = False,
     device: Optional[torch.device] = None,
-) -> ndarray:
+) -> npt.NDArray:
     """remove masks which have inconsistent flows
 
     Uses metrics.flow_error to compute flows from predicted masks
@@ -653,8 +653,10 @@ def remove_bad_flow_masks(
 
 
 def get_masks(
-    p: npt.NDArray, iscell: Optional[ndarray] = None, rpad: int = 20
-) -> ndarray:
+    p: npt.NDArray,
+    iscell: Optional[npt.NDArray] = None,
+    rpad: int = 20,
+) -> npt.NDArray:
     """create masks using pixel convergence after running dynamics
 
     Makes a histogram of final pixel locations p, initializes masks
@@ -775,8 +777,8 @@ def compute_masks(
     dP: npt.NDArray,
     cellprob: npt.NDArray,
     p: None = None,
-    niter: float64 = 200,
-    cellprob_threshold: float = 0.0,
+    niter: np.float64 = 200,
+    cellprob_threshold: Union[float, int] = 0.0,
     flow_threshold: float = 0.4,
     interp: bool = True,
     do_3D: bool = False,
@@ -784,7 +786,7 @@ def compute_masks(
     resize: Optional[List[int]] = None,
     use_gpu: bool = False,
     device: Optional[torch.device] = None,
-) -> Tuple[ndarray, ndarray]:
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """compute masks using dynamics from dP, cellprob, and boundary"""
 
     cp_mask = cellprob > cellprob_threshold

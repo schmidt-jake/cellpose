@@ -3,9 +3,6 @@ from typing import List, Optional, Tuple
 import warnings
 
 import cv2
-from numpy import float64
-from numpy import int64
-from numpy import ndarray
 import numpy as np
 import numpy.typing as npt
 import torch
@@ -13,7 +10,7 @@ import torch
 transforms_logger = logging.getLogger(__name__)
 
 
-def _taper_mask(ly: int = 224, lx: int = 224, sig: float = 7.5) -> ndarray:
+def _taper_mask(ly: int = 224, lx: int = 224, sig: float = 7.5) -> npt.NDArray:
     bsize = max(224, max(ly, lx))
     xm = np.arange(bsize)
     xm = np.abs(xm - xm.mean())
@@ -63,8 +60,12 @@ def unaugment_tiles(y, unet=False):
 
 
 def average_tiles(
-    y: npt.NDArray, ysub: List[List[int64]], xsub: List[List[int64]], Ly: int, Lx: int
-) -> ndarray:
+    y: npt.NDArray,
+    ysub: List[List[np.int64]],
+    xsub: List[List[np.int64]],
+    Ly: int,
+    Lx: int,
+) -> npt.NDArray:
     """average results of network over tiles
 
     Parameters
@@ -110,7 +111,7 @@ def make_tiles(
     bsize: int = 224,
     augment: bool = False,
     tile_overlap: float = 0.1,
-) -> Tuple[ndarray, List[List[int64]], List[List[int64]], int, int]:
+) -> Tuple[npt.NDArray, List[List[np.int64]], List[List[np.int64]], int, int]:
     """make tiles of image to run at test-time
 
     if augmented, tiles are flipped and tile_overlap=2.
@@ -207,7 +208,7 @@ def make_tiles(
     return IMG, ysub, xsub, Ly, Lx
 
 
-def normalize99(Y: npt.NDArray, lower: int = 1, upper: int = 99) -> ndarray:
+def normalize99(Y: npt.NDArray, lower: int = 1, upper: int = 99) -> npt.NDArray:
     """normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile"""
     X = Y.copy()
     x01 = np.percentile(X, lower)
@@ -234,7 +235,7 @@ def move_axis(img: torch.Tensor, m_axis: int = -1, first: bool = True) -> torch.
 
 # This was edited to fix a bug where single-channel images of shape (y,x) would be
 # transposed to (x,y) if x<y, making the labels no longer correspond to the data.
-def move_min_dim(img: npt.NDArray, force: bool = False) -> ndarray:
+def move_min_dim(img: npt.NDArray, force: bool = False) -> npt.NDArray:
     """move minimum dimension last as channels if < 10, or force==True"""
     if (
         len(img.shape) > 2
@@ -274,7 +275,7 @@ def convert_image(
     normalize: bool = True,
     invert: bool = False,
     nchan: int = 2,
-) -> ndarray:
+) -> npt.NDArray:
     """return image with z first, channels last and normalized intensities"""
 
     # squeeze image, and if channel_axis or z_axis given, transpose image
@@ -356,8 +357,10 @@ def convert_image(
 
 
 def reshape(
-    data: torch.Tensor, channels: List[int] = [0, 0], chan_first: bool = False
-) -> ndarray:
+    data: torch.Tensor,
+    channels: List[int] = [0, 0],
+    chan_first: bool = False,
+) -> npt.NDArray:
     """reshape data using channels
 
     Parameters
@@ -416,7 +419,11 @@ def reshape(
     return data
 
 
-def normalize_img(img: npt.NDArray, axis: int = -1, invert: bool = False) -> ndarray:
+def normalize_img(
+    img: npt.NDArray,
+    axis: int = -1,
+    invert: bool = False,
+) -> npt.NDArray:
     """normalize each channel of the image so that so that 0.0=1st percentile
     and 1.0=99th percentile of image intensities
 
@@ -460,7 +467,12 @@ def normalize_img(img: npt.NDArray, axis: int = -1, invert: bool = False) -> nda
 
 
 def reshape_train_test(
-    train_data, train_labels, test_data, test_labels, channels, normalize=True
+    train_data,
+    train_labels,
+    test_data,
+    test_labels,
+    channels,
+    normalize=True,
 ):
     """check sizes and reshape train and test data for training"""
     nimg = len(train_data)
@@ -572,10 +584,10 @@ def resize_image(
     img0: npt.NDArray,
     Ly: Optional[int] = None,
     Lx: Optional[int] = None,
-    rsz: Optional[float64] = None,
+    rsz: Optional[np.float64] = None,
     interpolation: int = cv2.INTER_LINEAR,
     no_channels: bool = False,
-) -> ndarray:
+) -> npt.NDArray:
     """resize image for computing flows / unresize for computing dynamics
 
     Parameters
@@ -631,8 +643,10 @@ def resize_image(
 
 
 def pad_image_ND(
-    img0: npt.NDArray, div: int = 16, extra: int = 1
-) -> Tuple[ndarray, ndarray, ndarray]:
+    img0: npt.NDArray,
+    div: int = 16,
+    extra: int = 1,
+) -> Tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
     """pad image for test-time so that its dimensions are a multiple of 16 (2D or 3D)
 
     Parameters

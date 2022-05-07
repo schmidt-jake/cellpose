@@ -269,7 +269,7 @@ class CPnet(nn.Module):
         mkldnn: bool = False,
         diam_mean: Union[Parameter, float] = 30.0,
     ) -> None:
-        super(CPnet, self).__init__()
+        super().__init__()
         self.nbase = nbase
         self.nout = nout
         self.sz = sz

@@ -1,8 +1,6 @@
 from typing import List, Optional, Tuple
 
 from numba import jit
-from numpy import int64
-from numpy import ndarray
 import numpy as np
 import numpy.typing as npt
 from scipy.ndimage import convolve
@@ -84,7 +82,7 @@ def average_precision(
     masks_true: npt.NDArray,
     masks_pred: npt.NDArray,
     threshold: List[float] = [0.5, 0.75, 0.9],
-) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
+) -> Tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
     """average precision estimation: AP = TP / (TP + FP + FN)
 
     This function is based heavily on the *fast* stardist matching functions
@@ -184,8 +182,9 @@ def _label_overlap(x, y):
 
 
 def _intersection_over_union(
-    masks_true: npt.NDArray, masks_pred: npt.NDArray
-) -> ndarray:
+    masks_true: npt.NDArray,
+    masks_pred: npt.NDArray,
+) -> npt.NDArray:
     """intersection over union of all mask pairs
 
     Parameters
@@ -227,7 +226,7 @@ def _intersection_over_union(
     return iou
 
 
-def _true_positive(iou: npt.NDArray, th: float) -> int64:
+def _true_positive(iou: npt.NDArray, th: float) -> np.int64:
     """true positive at threshold th
 
     Parameters
@@ -272,7 +271,7 @@ def flow_error(
     dP_net: npt.NDArray,
     use_gpu: bool = False,
     device: Optional[device] = None,
-) -> Tuple[ndarray, ndarray]:
+) -> Tuple[npt.NDArray, npt.NDArray]:
     """error in flows from predicted masks vs flows predicted by network run on image
 
     This function serves to benchmark the quality of masks, it works as follows
