@@ -1,38 +1,55 @@
-import sys, os, pathlib, warnings, datetime, tempfile, glob, time
+import datetime
 import gc
-from natsort import natsorted
-from tqdm import tqdm, trange
+import glob
+import os
+import pathlib
+import sys
+import tempfile
+import time
+import warnings
 
-from PyQt5 import QtGui, QtCore, Qt, QtWidgets
-from PyQt5.QtWidgets import (
-    QMainWindow,
-    QApplication,
-    QWidget,
-    QScrollBar,
-    QSlider,
-    QComboBox,
-    QGridLayout,
-    QPushButton,
-    QFrame,
-    QCheckBox,
-    QLabel,
-    QProgressBar,
-    QLineEdit,
-    QMessageBox,
-    QGroupBox,
-)
-import pyqtgraph as pg
-from pyqtgraph import GraphicsScene
-
-import numpy as np
 import cv2
+from natsort import natsorted
+import numpy as np
+from PyQt5 import Qt
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QCheckBox
+from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QFrame
+from PyQt5.QtWidgets import QGridLayout
+from PyQt5.QtWidgets import QGroupBox
+from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QProgressBar
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QScrollBar
+from PyQt5.QtWidgets import QSlider
+from PyQt5.QtWidgets import QWidget
+from pyqtgraph import GraphicsScene
+import pyqtgraph as pg
+from tqdm import tqdm
+from tqdm import trange
 
-from . import guiparts, menus, io
-from .. import models, core, dynamics
-from ..utils import download_url_to_file, masks_to_outlines, diameters
-from ..io import get_image_files, imsave, imread
-from ..transforms import resize_image, normalize99  # fixed import
+from . import guiparts
+from . import io
+from . import menus
+from .. import core
+from .. import dynamics
+from .. import models
+from ..io import get_image_files
+from ..io import imread
+from ..io import imsave
 from ..plot import disk
+from ..transforms import normalize99  # fixed import
+from ..transforms import resize_image
+from ..utils import diameters
+from ..utils import download_url_to_file
+from ..utils import masks_to_outlines
 
 try:
     import matplotlib.pyplot as plt

@@ -3,10 +3,10 @@ import pathlib
 
 import dask
 import dask.array as da
+from dask.array.utils import assert_eq
 import numpy as np
 import pytest
 import tifffile
-from dask.array.utils import assert_eq
 
 from cellpose.contrib import distributed_segmentation
 

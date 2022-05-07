@@ -1,12 +1,13 @@
-import numpy as np
-import warnings
-import cv2
-
 import logging
+import warnings
+
+import cv2
+import numpy as np
 
 transforms_logger = logging.getLogger(__name__)
 
-from . import dynamics, utils
+from . import dynamics
+from . import utils
 
 
 def _taper_mask(ly=224, lx=224, sig=7.5):

@@ -1,6 +1,7 @@
 def test_cellpose_imports_without_error():
     import cellpose
-    from cellpose import models, core
+    from cellpose import core
+    from cellpose import models
 
     model = models.CellposeModel()
     model = core.UnetModel()
@@ -26,7 +27,9 @@ def test_gpu_check():
 
 
 def test_model_dir():
-    import os, pathlib
+    import os
+    import pathlib
+
     import numpy as np
 
     os.environ["CELLPOSE_LOCAL_MODELS_PATH"] = os.fspath(

@@ -1,8 +1,12 @@
 import os
-import numpy as np
+
 import cv2
+import numpy as np
 from scipy.ndimage import gaussian_filter
-from . import utils, io, transforms
+
+from . import io
+from . import transforms
+from . import utils
 
 try:
     import matplotlib

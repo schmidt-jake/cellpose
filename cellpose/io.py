@@ -1,14 +1,24 @@
-import os, datetime, gc, warnings, glob
+import datetime
+import gc
+import glob
+import logging
+import os
+import pathlib
+from pathlib import Path
+import sys
+import warnings
+
+import cv2
 from natsort import natsorted
 import numpy as np
-import cv2
 import tifffile
-import logging, pathlib, sys
 from tqdm import tqdm
-from pathlib import Path
 
 try:
-    from PyQt5 import QtGui, QtCore, Qt, QtWidgets
+    from PyQt5 import Qt
+    from PyQt5 import QtCore
+    from PyQt5 import QtGui
+    from PyQt5 import QtWidgets
     from PyQt5.QtWidgets import QMessageBox
 
     GUI = True
@@ -52,7 +62,10 @@ def logger_setup():
     return logger, log_file
 
 
-from . import utils, plot, transforms
+from . import plot
+from . import transforms
+from . import utils
+
 
 # helper function to check for a path; if it doesn't exist, make it
 def check_dir(path):

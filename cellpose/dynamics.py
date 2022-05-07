@@ -1,23 +1,30 @@
-import time, os
-from scipy.ndimage.filters import maximum_filter1d
-import torch
-import scipy.ndimage
-import numpy as np
-import tifffile
-from tqdm import trange
-from numba import njit, float32, int32, vectorize
+import logging
+import os
+import time
+
 import cv2
 import fastremap
-
-import logging
+from numba import float32
+from numba import int32
+from numba import njit
+from numba import vectorize
+import numpy as np
+import scipy.ndimage
+from scipy.ndimage.filters import maximum_filter1d
+import tifffile
+import torch
+from tqdm import trange
 
 dynamics_logger = logging.getLogger(__name__)
 
-from . import utils, metrics, transforms
-
 import torch
-from torch import optim, nn
+from torch import nn
+from torch import optim
+
+from . import metrics
 from . import resnet_torch
+from . import transforms
+from . import utils
 
 TORCH_ENABLED = True
 torch_GPU = torch.device("cuda")

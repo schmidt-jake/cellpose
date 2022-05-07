@@ -1,8 +1,15 @@
-from cellpose import io, models, metrics, plot
+import os
 from pathlib import Path
-from subprocess import check_output, STDOUT
-import os, shutil
+import shutil
+from subprocess import check_output
+from subprocess import STDOUT
+
 import numpy as np
+
+from cellpose import io
+from cellpose import metrics
+from cellpose import models
+from cellpose import plot
 
 try:
     import matplotlib.pyplot as plt
