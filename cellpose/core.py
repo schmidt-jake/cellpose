@@ -524,7 +524,7 @@ class UnetModel:
         slc[-3] = slice(0, self.nclasses + 32 * return_conv + 1)
         slc[-2] = slice(ysub[0], ysub[-1] + 1)
         slc[-1] = slice(xsub[0], xsub[-1] + 1)
-        slc = tuple(slc)
+        slc = tuple(slc)  # type: ignore[assignment]
 
         # run network
         if tile or augment or imgs.ndim == 4:
@@ -544,7 +544,7 @@ class UnetModel:
         # slice out padding
         y = y[slc]
         # transpose so channels axis is last again
-        y = np.transpose(y, detranspose)
+        y = y.permute(detranspose)
 
         return y, style
 
@@ -644,11 +644,11 @@ class UnetModel:
                 imgi, bsize=bsize, augment=augment, tile_overlap=tile_overlap
             )
             ny, nx, nchan, ly, lx = IMG.shape
-            IMG = np.reshape(IMG, (ny * nx, nchan, ly, lx))
+            IMG = IMG.reshape(ny * nx, nchan, ly, lx)
             batch_size = self.batch_size
             niter = int(np.ceil(IMG.shape[0] / batch_size))
             nout = self.nclasses + 32 * return_conv
-            y = np.zeros((IMG.shape[0], nout, ly, lx))
+            y = torch.zeros((IMG.shape[0], nout, ly, lx))
             for k in range(niter):
                 irange = np.arange(
                     batch_size * k, min(IMG.shape[0], batch_size * k + batch_size)

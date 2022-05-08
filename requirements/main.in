@@ -3,8 +3,9 @@ natsort
 numba
 numpy
 opencv-python
-tifffile
-torch
-tqdm
 scikit-image
 scipy
+tifffile
+torch
+torchvision
+tqdm

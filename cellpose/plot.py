@@ -1,8 +1,8 @@
 import os
 
 import numpy as np
-import numpy.typing as npt
 from scipy.ndimage import gaussian_filter
+import torch
 
 from cellpose import io
 from cellpose import transforms
@@ -12,7 +12,7 @@ try:
     import matplotlib
 
     MATPLOTLIB_ENABLED = True
-except:
+except ImportError:
     MATPLOTLIB_ENABLED = False
 
 try:
@@ -20,13 +20,15 @@ try:
     from skimage.segmentation import find_boundaries
 
     SKIMAGE_ENABLED = True
-except:
+except ImportError:
     SKIMAGE_ENABLED = False
 
-# modified to use sinebow color
+
 def dx_to_circ(
-    dP: npt.NDArray, transparency: bool = False, mask: None = None
-) -> npt.NDArray:
+    dP: torch.Tensor,
+    transparency: bool = False,
+    mask: None = None,
+) -> torch.Tensor:
     """dP is 2 x Y x X => 'optic' flow representation
 
     Parameters
@@ -42,24 +44,25 @@ def dx_to_circ(
         Multiplies each RGB component to suppress noise
 
     """
-
-    dP = np.array(dP)
-    mag = np.clip(transforms.normalize99(np.sqrt(np.sum(dP**2, axis=0))), 0, 1.0)
-    angles = np.arctan2(dP[1], dP[0]) + np.pi
+    # modified to use sinebow color
+    mag = torch.clip(
+        transforms.normalize99(torch.sqrt(torch.sum(dP**2, dim=0))), 0, 1.0
+    )
+    angles = torch.arctan2(dP[1], dP[0]) + torch.pi
     a = 2
-    r = (np.cos(angles) + 1) / a
-    g = (np.cos(angles + 2 * np.pi / 3) + 1) / a
-    b = (np.cos(angles + 4 * np.pi / 3) + 1) / a
+    r = (torch.cos(angles) + 1) / a
+    g = (torch.cos(angles + 2 * torch.pi / 3) + 1) / a
+    b = (torch.cos(angles + 4 * torch.pi / 3) + 1) / a
 
     if transparency:
-        im = np.stack((r, g, b, mag), axis=-1)
+        im = torch.stack((r, g, b, mag), dim=-1)
     else:
-        im = np.stack((r * mag, g * mag, b * mag), axis=-1)
+        im = torch.stack((r * mag, g * mag, b * mag), dim=-1)
 
     if mask is not None and transparency and dP.shape[0] < 3:
         im[:, :, -1] *= mask
 
-    im = (np.clip(im, 0, 1) * 255).astype(np.uint8)
+    im = (torch.clip(im, 0, 1) * 255).byte()
     return im
 
 

@@ -2,21 +2,22 @@ import logging
 from typing import List, Optional, Tuple
 import warnings
 
-import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
 from torch.nn.functional import pad
+from torchvision.transforms.functional import InterpolationMode
+from torchvision.transforms.functional import resize
 
 transforms_logger = logging.getLogger(__name__)
 
 
-def _taper_mask(ly: int = 224, lx: int = 224, sig: float = 7.5) -> npt.NDArray:
+def _taper_mask(ly: int = 224, lx: int = 224, sig: float = 7.5) -> torch.Tensor:
     bsize = max(224, max(ly, lx))
-    xm = np.arange(bsize)
-    xm = np.abs(xm - xm.mean())
-    mask = 1 / (1 + np.exp((xm - (bsize / 2 - 20)) / sig))
-    mask = mask * mask[:, np.newaxis]
+    xm = torch.arange(bsize)
+    xm = torch.abs(xm - xm.float().mean())
+    mask = 1 / (1 + torch.exp((xm - (bsize / 2 - 20)) / sig))
+    mask = mask * mask.unsqueeze(-1)
     mask = mask[
         bsize // 2 - ly // 2 : bsize // 2 + ly // 2 + ly % 2,
         bsize // 2 - lx // 2 : bsize // 2 + lx // 2 + lx % 2,
@@ -61,12 +62,12 @@ def unaugment_tiles(y, unet=False):
 
 
 def average_tiles(
-    y: npt.NDArray,
+    y: torch.Tensor,
     ysub: List[List[np.int64]],
     xsub: List[List[np.int64]],
     Ly: int,
     Lx: int,
-) -> npt.NDArray:
+) -> torch.Tensor:
     """average results of network over tiles
 
     Parameters
@@ -96,8 +97,8 @@ def average_tiles(
         network output averaged over tiles
 
     """
-    Navg = np.zeros((Ly, Lx))
-    yf = np.zeros((y.shape[1], Ly, Lx), np.float32)
+    Navg = torch.zeros((Ly, Lx))
+    yf = torch.zeros((y.shape[1], Ly, Lx), dtype=torch.float32)
     # taper edges of tiles
     mask = _taper_mask(ly=y.shape[-2], lx=y.shape[-1])
     for j in range(len(ysub)):
@@ -598,13 +599,13 @@ def reshape_and_normalize_data(
 
 
 def resize_image(
-    img0: npt.NDArray,
+    img0: torch.Tensor,
     Ly: Optional[int] = None,
     Lx: Optional[int] = None,
     rsz: Optional[np.float64] = None,
-    interpolation: int = cv2.INTER_LINEAR,
+    interpolation: int = InterpolationMode.BILINEAR,
     no_channels: bool = False,
-) -> npt.NDArray:
+) -> torch.Tensor:
     """resize image for computing flows / unresize for computing dynamics
 
     Parameters
@@ -653,9 +654,9 @@ def resize_image(
         else:
             imgs = np.zeros((img0.shape[0], Ly, Lx, img0.shape[-1]), np.float32)
         for i, img in enumerate(img0):
-            imgs[i] = cv2.resize(img, (Lx, Ly), interpolation=interpolation)
+            imgs[i] = resize(img0, size=(Lx, Ly), interpolation=interpolation)
     else:
-        imgs = cv2.resize(img0, (Lx, Ly), interpolation=interpolation)
+        imgs = resize(img0, size=(Lx, Ly), interpolation=interpolation)
     return imgs
 
 
@@ -695,9 +696,12 @@ def pad_image_ND(
     ypad2 = extra * div // 2 + Lpad - Lpad // 2
 
     if img0.ndim > 3:
-        pads = (0, 0, 0, 0, xpad1, xpad2, ypad1, ypad2)
+        pads = [0, 0, 0, 0, xpad1, xpad2, ypad1, ypad2]
     else:
-        pads = (0, 0, xpad1, xpad2, ypad1, ypad2)
+        pads = [0, 0, xpad1, xpad2, ypad1, ypad2]
+
+    # the torch API for padding is reversed from numpy's
+    pads.reverse()
 
     I = pad(img0, pads, mode="constant")
 

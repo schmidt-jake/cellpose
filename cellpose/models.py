@@ -476,10 +476,7 @@ class CellposeModel(UnetModel):
         progress: None = None,
         loop_run: bool = False,
         model_loaded: bool = False,
-    ) -> Union[
-        Tuple[List[npt.NDArray], List[List[npt.NDArray]], List[npt.NDArray]],
-        Tuple[npt.NDArray, List[npt.NDArray], npt.NDArray],
-    ]:
+    ) -> Tuple[torch.Tensor, List[torch.Tensor], torch.Tensor]:
         """
         segment list of images x, or 4D array - Z x nchan x Y x X
 
@@ -705,7 +702,7 @@ class CellposeModel(UnetModel):
         anisotropy: Optional[float] = 1.0,
         do_3D: bool = False,
         stitch_threshold: float = 0.0,
-    ) -> Tuple[npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray, npt.NDArray]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
         shape = x.shape
         nimg = shape[0]
@@ -763,7 +760,7 @@ class CellposeModel(UnetModel):
                     yf = transforms.resize_image(yf, shape[1], shape[2])
 
                 cellprob[i] = yf[:, :, 2]
-                dP[:, i] = yf[:, :, :2].transpose((2, 0, 1))
+                dP[:, i] = yf[:, :, :2].permute((2, 0, 1))
                 if self.nclasses == 4:
                     if i == 0:
                         bd = np.zeros_like(cellprob)
@@ -820,7 +817,8 @@ class CellposeModel(UnetModel):
             )
 
         else:
-            masks, p = np.zeros(0), np.zeros(0)  # pass back zeros if not compute_masks
+            # pass back zeros if not compute_masks
+            masks, p = torch.zeros(0), torch.zeros(0)
         return masks, styles, dP, cellprob, p
 
     def loss_fn(self, lbl, y):
