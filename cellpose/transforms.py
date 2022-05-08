@@ -682,6 +682,7 @@ def pad_image_ND(
         pads = np.array([[0, 0], [xpad1, xpad2], [ypad1, ypad2]])
 
     I = np.pad(img0, pads, mode="constant")
+    # I.shape = (2, 272, 272)
 
     Ly, Lx = img0.shape[-2:]
     ysub = np.arange(xpad1, xpad1 + Ly)
