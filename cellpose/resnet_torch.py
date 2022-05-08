@@ -48,7 +48,6 @@ class resdown(nn.Module):
                 )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x.shape = (2, 120, 224, 144)
         x = self.proj(x) + self.conv[1](self.conv[0](x))
         x = x + self.conv[3](self.conv[2](x))
         return x

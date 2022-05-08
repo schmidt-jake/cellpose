@@ -695,8 +695,8 @@ def get_masks(
 
     """
 
-    pflows = []
-    edges = []
+    pflows: List[npt.NDArray] = []
+    edges: List[npt.NDArray] = []
     shape0 = p.shape[1:]
     dims = len(p)
     if iscell is not None:
@@ -715,19 +715,21 @@ def get_masks(
             p[i, ~iscell] = inds[i][~iscell].float()
 
     for i in range(dims):
-        pflows.append(p[i].flatten().int())
-        edges.append(torch.arange(-0.5 - rpad, shape0[i] + 0.5 + rpad, 1))
+        pflows.append(p[i].flatten().int().numpy())
+        edges.append(np.arange(-0.5 - rpad, shape0[i] + 0.5 + rpad, 1))
 
     # FIXME
-    # here's as far as I got
-    h, _ = torch.histogramdd(tuple(pflows), bins=edges)
+    # h, _ = torch.histogramdd(torch.stack(pflows, dim=1), bins=edges)
+    h, _ = np.histogramdd(tuple(pflows), bins=edges)
     hmax = h.copy()
     for i in range(dims):
-        hmax = maximum_filter1d(hmax, 5, axis=i)
+        hmax = maximum_filter1d(hmax, 5, axis=i)  # FIXME
 
-    seeds = np.nonzero(np.logical_and(h - hmax > -1e-6, h > 10))
+    h = torch.from_numpy(h)
+    hmax = torch.from_numpy(hmax)
+    seeds = torch.nonzero(torch.logical_and(h - hmax > -1e-6, h > 10))
     Nmax = h[seeds]
-    isort = np.argsort(Nmax)[::-1]
+    isort = torch.argsort(Nmax)[::-1]
     for s in seeds:
         s = s[isort]
 
