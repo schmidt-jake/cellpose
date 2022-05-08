@@ -803,8 +803,8 @@ class CellposeModel(UnetModel):
                     masks.append(outputs[0])
                     p.append(outputs[1])
 
-                masks = np.array(masks)
-                p = np.array(p)
+                masks = torch.stack(masks)
+                p = torch.stack(p)
 
                 if stitch_threshold > 0 and nimg > 1:
                     masks = utils.stitch3D(masks, stitch_threshold=stitch_threshold)

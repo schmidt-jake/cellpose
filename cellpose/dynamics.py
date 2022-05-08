@@ -597,20 +597,23 @@ def follow_flows(
         p = torch.stack(p)
         p = p.float()
 
-        inds = torch.nonzero(torch.abs(dP[0]) > 1e-3).int().T
+        inds = (
+            torch.stack(torch.nonzero(torch.abs(dP[0]) > 1e-3, as_tuple=True)).int().T
+        )
 
         if inds.ndim < 2 or inds.shape[0] < 5:
             dynamics_logger.warning("WARNING: no mask pixels found")
             return p, None
 
         if not interp:
-            p = steps2D(p, dP.float(), inds, niter)
+            p = steps2D(p.numpy(), dP.float().numpy(), inds.numpy(), niter)
 
         else:
             p_interp = steps2D_interp(
                 p[:, inds[:, 0], inds[:, 1]], dP, niter, use_gpu=use_gpu, device=device
             )
             p[:, inds[:, 0], inds[:, 1]] = p_interp
+    p = torch.from_numpy(p)
     return p, inds
 
 
@@ -656,10 +659,10 @@ def remove_bad_flow_masks(
 
 
 def get_masks(
-    p: npt.NDArray,
-    iscell: Optional[npt.NDArray] = None,
+    p: torch.Tensor,
+    iscell: Optional[torch.Tensor] = None,
     rpad: int = 20,
-) -> npt.NDArray:
+) -> torch.Tensor:
     """create masks using pixel convergence after running dynamics
 
     Makes a histogram of final pixel locations p, initializes masks
@@ -705,17 +708,19 @@ def get_masks(
                 indexing="ij",
             )
         elif dims == 2:
-            inds = np.meshgrid(
-                np.arange(shape0[0]), np.arange(shape0[1]), indexing="ij"
+            inds = torch.meshgrid(
+                torch.arange(shape0[0]), torch.arange(shape0[1]), indexing="ij"
             )
         for i in range(dims):
-            p[i, ~iscell] = inds[i][~iscell]
+            p[i, ~iscell] = inds[i][~iscell].float()
 
     for i in range(dims):
-        pflows.append(p[i].flatten().astype("int32"))
-        edges.append(np.arange(-0.5 - rpad, shape0[i] + 0.5 + rpad, 1))
+        pflows.append(p[i].flatten().int())
+        edges.append(torch.arange(-0.5 - rpad, shape0[i] + 0.5 + rpad, 1))
 
-    h, _ = np.histogramdd(tuple(pflows), bins=edges)
+    # FIXME
+    # here's as far as I got
+    h, _ = torch.histogramdd(tuple(pflows), bins=edges)
     hmax = h.copy()
     for i in range(dims):
         hmax = maximum_filter1d(hmax, 5, axis=i)
