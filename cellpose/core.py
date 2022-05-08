@@ -355,22 +355,25 @@ class UnetModel:
 
         return masks, flows, styles
 
-    def _to_device(self, x: npt.NDArray) -> torch.Tensor:
-        X = torch.from_numpy(x).float().to(self.device)
+    def _to_device(self, x: torch.Tensor) -> torch.Tensor:
+        X = x.float().to(self.device)
         return X
 
-    def _from_device(self, X: torch.Tensor) -> npt.NDArray:
-        x = X.detach().cpu().numpy()
+    def _from_device(self, X: torch.Tensor) -> torch.Tensor:
+        x = X.detach().cpu()
         return x
 
     def network(
-        self, x: npt.NDArray, return_conv: bool = False
-    ) -> Tuple[npt.NDArray, npt.NDArray]:
+        self,
+        x: torch.Tensor,
+        return_conv: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """convert imgs to torch and run network model and return numpy"""
         X = self._to_device(x)
         self.net.eval()
-        if self.mkldnn:
-            self.net = mkldnn_utils.to_mkldnn(self.net)
+        # FIXME
+        # if self.mkldnn:
+        #     self.net = mkldnn_utils.to_mkldnn(self.net)
         with torch.no_grad():
             y, style = self.net(X)
         del X
@@ -384,7 +387,7 @@ class UnetModel:
 
     def _run_nets(
         self,
-        img: npt.NDArray,
+        img: torch.Tensor,
         net_avg: bool = False,
         augment: bool = False,
         tile: bool = True,
@@ -392,7 +395,7 @@ class UnetModel:
         bsize: int = 224,
         return_conv: bool = False,
         progress: None = None,
-    ) -> Tuple[npt.NDArray, npt.NDArray]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """run network (if more than one, loop over networks and average results
 
         Parameters
@@ -461,13 +464,13 @@ class UnetModel:
 
     def _run_net(
         self,
-        imgs: npt.NDArray,
+        imgs: torch.Tensor,
         augment: bool = False,
         tile: bool = True,
         tile_overlap: float = 0.1,
         bsize: int = 224,
         return_conv: bool = False,
-    ) -> Tuple[npt.NDArray, npt.NDArray]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """run network on image or stack of images
 
         (faster if augment is False)
@@ -548,12 +551,12 @@ class UnetModel:
 
     def _run_tiled(
         self,
-        imgi: npt.NDArray,
+        imgi: torch.Tensor,
         augment: bool = False,
         bsize: int = 224,
         tile_overlap: float = 0.1,
         return_conv: bool = False,
-    ) -> Tuple[npt.NDArray, npt.NDArray]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """run network in tiles of size [bsize x bsize]
 
         First image is split into overlapping tiles of size [bsize x bsize].

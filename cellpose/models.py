@@ -688,7 +688,7 @@ class CellposeModel(UnetModel):
 
     def _run_cp(
         self,
-        x: npt.NDArray,
+        x: torch.Tensor,
         compute_masks: bool = True,
         normalize: bool = True,
         invert: bool = False,
@@ -731,22 +731,23 @@ class CellposeModel(UnetModel):
             del yf
         else:
             iterator = range(nimg)
-            styles = np.zeros((nimg, self.nbase[-1]), np.float32)
+            styles = torch.zeros((nimg, self.nbase[-1]), dtype=torch.float32)
             if resample:
-                dP = np.zeros((2, nimg, shape[1], shape[2]), np.float32)
-                cellprob = np.zeros((nimg, shape[1], shape[2]), np.float32)
+                dP = torch.zeros((2, nimg, shape[1], shape[2]), dtype=torch.float32)
+                cellprob = torch.zeros((nimg, shape[1], shape[2]), dtype=torch.float32)
 
             else:
-                dP = np.zeros(
+                dP = torch.zeros(
                     (2, nimg, int(shape[1] * rescale), int(shape[2] * rescale)),
-                    np.float32,
+                    dtype=torch.float32,
                 )
-                cellprob = np.zeros(
-                    (nimg, int(shape[1] * rescale), int(shape[2] * rescale)), np.float32
+                cellprob = torch.zeros(
+                    (nimg, int(shape[1] * rescale), int(shape[2] * rescale)),
+                    dtype=torch.float32,
                 )
 
             for i in iterator:
-                img = np.asarray(x[i])
+                img = x[i]
                 if normalize or invert:
                     img = transforms.normalize_img(img, invert=invert)
                 if rescale != 1.0:
