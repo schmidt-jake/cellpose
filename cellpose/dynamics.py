@@ -538,13 +538,13 @@ def steps2D(p, dP, inds, niter):
 
 
 def follow_flows(
-    dP: npt.NDArray,
-    mask: None = None,
+    dP: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
     niter: np.float64 = 200,
     interp: bool = True,
     use_gpu: bool = True,
     device: Optional[torch.device] = None,
-) -> Tuple[npt.NDArray, npt.NDArray]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """define pixels and run dynamics to recover masks in 2D
 
     Pixels are meshgrid. Only pixels with non-zero cell-probability
@@ -580,7 +580,7 @@ def follow_flows(
         indices of pixels used for dynamics; [axis x Ly x Lx] or [axis x Lz x Ly x Lx]
 
     """
-    shape = np.array(dP.shape[1:]).astype(np.int32)
+    shape = dP.shape[1:]
     niter = np.uint32(niter)
     if len(shape) > 2:
         p = np.meshgrid(
@@ -591,17 +591,20 @@ def follow_flows(
         inds = np.array(np.nonzero(np.abs(dP[0]) > 1e-3)).astype(np.int32).T
         p = steps3D(p, dP, inds, niter)
     else:
-        p = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), indexing="ij")
-        p = np.array(p).astype(np.float32)
+        p = torch.meshgrid(
+            torch.arange(shape[0]), torch.arange(shape[1]), indexing="ij"
+        )
+        p = torch.stack(p)
+        p = p.float()
 
-        inds = np.array(np.nonzero(np.abs(dP[0]) > 1e-3)).astype(np.int32).T
+        inds = torch.nonzero(torch.abs(dP[0]) > 1e-3).int().T
 
         if inds.ndim < 2 or inds.shape[0] < 5:
             dynamics_logger.warning("WARNING: no mask pixels found")
             return p, None
 
         if not interp:
-            p = steps2D(p, dP.astype(np.float32), inds, niter)
+            p = steps2D(p, dP.float(), inds, niter)
 
         else:
             p_interp = steps2D_interp(
@@ -774,8 +777,8 @@ def get_masks(
 
 
 def compute_masks(
-    dP: npt.NDArray,
-    cellprob: npt.NDArray,
+    dP: torch.Tensor,
+    cellprob: torch.Tensor,
     p: None = None,
     niter: np.float64 = 200,
     cellprob_threshold: Union[float, int] = 0.0,
@@ -786,12 +789,13 @@ def compute_masks(
     resize: Optional[List[int]] = None,
     use_gpu: bool = False,
     device: Optional[torch.device] = None,
-) -> Tuple[npt.NDArray, npt.NDArray]:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """compute masks using dynamics from dP, cellprob, and boundary"""
 
     cp_mask = cellprob > cellprob_threshold
 
-    if np.any(cp_mask):  # mask at this point is a cell cluster binary map, not labels
+    # mask at this point is a cell cluster binary map, not labels
+    if cp_mask.any().item():
         # follow flows
         if p is None:
             p, inds = follow_flows(

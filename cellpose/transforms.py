@@ -656,7 +656,9 @@ def resize_image(
         for i, img in enumerate(img0):
             imgs[i] = resize(img0, size=(Lx, Ly), interpolation=interpolation)
     else:
-        imgs = resize(img0, size=(Lx, Ly), interpolation=interpolation)
+        img0 = img0.permute(2, 0, 1)  # HWC -> CHW
+        imgs: torch.Tensor = resize(img0, size=(Lx, Ly), interpolation=interpolation)
+        imgs = imgs.permute(1, 2, 0)  # CHW -> HWC
     return imgs
 
 

@@ -295,8 +295,6 @@ class CPnet(nn.Module):
         self.style_on = style_on
 
     def forward(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        # data.shape = [4, 18, 224, 244]
-        # but it should be [4, 2, 244, 244]
         if self.mkldnn:
             data = data.to_mkldnn()
         T0 = self.downsample(data)
