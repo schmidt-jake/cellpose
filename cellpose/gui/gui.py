@@ -9,47 +9,37 @@ import time
 import warnings
 
 import cv2
-from natsort import natsorted
 import numpy as np
-from PyQt5 import Qt
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QCheckBox
-from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtWidgets import QFrame
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtWidgets import QGroupBox
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtWidgets import QLineEdit
-from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtWidgets import QProgressBar
-from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QScrollBar
-from PyQt5.QtWidgets import QSlider
-from PyQt5.QtWidgets import QWidget
-from pyqtgraph import GraphicsScene
 import pyqtgraph as pg
-from tqdm import tqdm
-from tqdm import trange
+from natsort import natsorted
+from PyQt5 import Qt, QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QFrame,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QScrollBar,
+    QSlider,
+    QWidget,
+)
+from pyqtgraph import GraphicsScene
+from tqdm import tqdm, trange
 
-from . import guiparts
-from . import io
-from . import menus
-from .. import core
-from .. import dynamics
-from .. import models
-from ..io import get_image_files
-from ..io import imread
-from ..io import imsave
+from .. import core, dynamics, models
+from ..io import get_image_files, imread, imsave
 from ..plot import disk
 from ..transforms import normalize99  # fixed import
 from ..transforms import resize_image
-from ..utils import diameters
-from ..utils import download_url_to_file
-from ..utils import masks_to_outlines
+from ..utils import diameters, download_url_to_file, masks_to_outlines
+from . import guiparts, io, menus
 
 try:
     import matplotlib.pyplot as plt

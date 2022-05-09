@@ -8,17 +8,13 @@ import cv2
 import fastremap
 import numpy as np
 import numpy.typing as npt
-from scipy.stats import mode
 import torch
+from scipy.stats import mode
 from torch import nn
 from torch.utils import mkldnn as mkldnn_utils
-from tqdm import tqdm
-from tqdm import trange
+from tqdm import tqdm, trange
 
-from cellpose import metrics
-from cellpose import resnet_torch
-from cellpose import transforms
-from cellpose import utils
+from cellpose import metrics, resnet_torch, transforms, utils
 
 TORCH_ENABLED = True
 

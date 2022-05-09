@@ -7,13 +7,8 @@ import numpy as np
 import numpy.typing as npt
 import torch
 
-from cellpose import dynamics
-from cellpose import plot
-from cellpose import transforms
-from cellpose import utils
-from cellpose.core import assign_device
-from cellpose.core import parse_model_string
-from cellpose.core import UnetModel
+from cellpose import dynamics, plot, transforms, utils
+from cellpose.core import UnetModel, assign_device, parse_model_string
 
 _MODEL_URL = "https://www.cellpose.org/models"
 _MODEL_DIR_ENV = os.environ.get("CELLPOSE_LOCAL_MODELS_PATH")
@@ -284,15 +279,7 @@ class Cellpose(torch.nn.Module):
             )
             rescale = self.diam_mean / np.array(diams)
             diameter = None
-            if isinstance(diams, list) or isinstance(diams, np.ndarray):
-                diam_string = "[" + "".join(["%0.2f, " % d for d in diams]) + "]"
-            else:
-                diam_string = "[ %0.2f ]" % diams
         elif estimate_size:
-            if self.pretrained_size is None:
-                reason = "no pretrained size model specified in model Cellpose"
-            else:
-                reason = "does not work on non-2D images"
             diams = self.diam_mean
         else:
             diams = diameter
@@ -1038,7 +1025,6 @@ class SizeModel(torch.nn.Module):
         tile: bool = True,
         batch_size: int = 8,
         progress: None = None,
-        interp: bool = True,
     ) -> Tuple[np.float64, np.float64]:
         """use images x to produce style or use style input to predict size of objects in image
 

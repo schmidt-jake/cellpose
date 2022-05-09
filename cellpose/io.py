@@ -3,21 +3,19 @@ import glob
 import logging
 import os
 import pathlib
-from pathlib import Path
 import sys
-from typing import List, Optional, Union
 import warnings
+from pathlib import Path
+from typing import List, Optional, Union
 
 import cv2
-from natsort import natsorted
 import numpy as np
 import numpy.typing as npt
 import tifffile
+from natsort import natsorted
 from tqdm import tqdm
 
-from cellpose import plot
-from cellpose import transforms
-from cellpose import utils
+from cellpose import plot, transforms, utils
 
 try:
     from PyQt5.QtWidgets import QMessageBox

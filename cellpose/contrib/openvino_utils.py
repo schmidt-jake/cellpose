@@ -1,8 +1,8 @@
 import io
 
 import numpy as np
-from openvino.runtime import Core
 import torch
+from openvino.runtime import Core
 
 ie = Core()
 

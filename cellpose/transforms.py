@@ -1,13 +1,12 @@
 import logging
-from typing import List, Optional, Tuple
 import warnings
+from typing import List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
 import torch
 from torch.nn.functional import pad
-from torchvision.transforms.functional import InterpolationMode
-from torchvision.transforms.functional import resize
+from torchvision.transforms.functional import InterpolationMode, resize
 
 transforms_logger = logging.getLogger(__name__)
 

@@ -1,7 +1,6 @@
 def test_cellpose_imports_without_error():
     import cellpose
-    from cellpose import core
-    from cellpose import models
+    from cellpose import core, models
 
     model = models.CellposeModel()
     model = core.UnetModel()

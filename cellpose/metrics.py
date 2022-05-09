@@ -1,15 +1,13 @@
 from typing import List, Optional, Tuple
 
-from numba import jit
 import numpy as np
 import numpy.typing as npt
-from scipy.ndimage import convolve
-from scipy.ndimage import mean
+from numba import jit
+from scipy.ndimage import convolve, mean
 from scipy.optimize import linear_sum_assignment
 from torch import device
 
-from cellpose import dynamics
-from cellpose import utils
+from cellpose import dynamics, utils
 
 
 def mask_ious(masks_true, masks_pred):

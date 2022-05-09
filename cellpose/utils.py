@@ -1,20 +1,22 @@
 import colorsys
 import io
-from logging import Logger
 import os
 import shutil
 import tempfile
+from logging import Logger
 from typing import Optional, Tuple
 from urllib.request import urlopen
 
 import cv2
 import numpy as np
 import numpy.typing as npt
-from scipy.ndimage import binary_fill_holes
-from scipy.ndimage import find_objects
-from scipy.ndimage import gaussian_filter
-from scipy.ndimage import generate_binary_structure
-from scipy.ndimage import label
+from scipy.ndimage import (
+    binary_fill_holes,
+    find_objects,
+    gaussian_filter,
+    generate_binary_structure,
+    label,
+)
 from scipy.spatial import ConvexHull
 from tqdm import tqdm
 

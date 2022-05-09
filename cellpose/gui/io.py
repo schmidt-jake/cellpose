@@ -9,17 +9,12 @@ import warnings
 
 import cv2
 import fastremap
-from natsort import natsorted
 import numpy as np
 import tifffile
+from natsort import natsorted
 
-from .. import models
-from .. import plot
-from .. import transforms
-from .. import utils
-from ..io import imread
-from ..io import imsave
-from ..io import outlines_to_text
+from .. import models, plot, transforms, utils
+from ..io import imread, imsave, outlines_to_text
 from ..transforms import normalize99
 
 try:

@@ -1,7 +1,6 @@
 import os
-from pathlib import Path
-from pathlib import PosixPath
 import shutil
+from pathlib import Path, PosixPath
 from typing import List
 
 import pytest

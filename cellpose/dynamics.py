@@ -4,18 +4,16 @@ from typing import List, Optional, Tuple, Union
 
 import cv2
 import fastremap
-from numba import njit
 import numpy as np
 import numpy.typing as npt
 import scipy.ndimage
-from scipy.ndimage import maximum_filter1d
 import tifffile
 import torch
+from numba import njit
+from scipy.ndimage import maximum_filter1d
 from tqdm import trange
 
-from cellpose import metrics
-from cellpose import transforms
-from cellpose import utils
+from cellpose import metrics, transforms, utils
 
 dynamics_logger = logging.getLogger(__name__)
 
@@ -662,7 +660,7 @@ def get_masks(
     p: torch.Tensor,
     iscell: Optional[torch.Tensor] = None,
     rpad: int = 20,
-) -> torch.Tensor:
+) -> npt.NDArray:
     """create masks using pixel convergence after running dynamics
 
     Makes a histogram of final pixel locations p, initializes masks
@@ -725,11 +723,14 @@ def get_masks(
     for i in range(dims):
         hmax = maximum_filter1d(hmax, 5, axis=i)  # FIXME
 
-    h = torch.from_numpy(h)
-    hmax = torch.from_numpy(hmax)
-    seeds = torch.nonzero(torch.logical_and(h - hmax > -1e-6, h > 10))
+    # h = torch.from_numpy(h)
+    # hmax = torch.from_numpy(hmax)
+    # seeds = torch.nonzero(torch.logical_and(h - hmax > -1e-6, h > 10))
+    # Nmax = h[seeds]
+    # isort = torch.argsort(Nmax)[::-1]
+    seeds = np.nonzero(np.logical_and(h - hmax > -1e-6, h > 10))
     Nmax = h[seeds]
-    isort = torch.argsort(Nmax)[::-1]
+    isort = np.argsort(Nmax)[::-1]
     for s in seeds:
         s = s[isort]
 

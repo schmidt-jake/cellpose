@@ -1,18 +1,15 @@
 import argparse
-from glob import glob
 import os
 import sys
+from glob import glob
 
+import numpy as np
 from matplotlib import pyplot as plt
 from natsort import natsorted
-import numpy as np
-from tifffile import imread
-from tifffile import imsave
-from tqdm import tqdm
-from tqdm import trange
+from tifffile import imread, imsave
+from tqdm import tqdm, trange
 
-from cellpose import metrics
-from cellpose import models
+from cellpose import metrics, models
 from cellpose.io import logger_setup
 from cellpose.transforms import normalize_img
 

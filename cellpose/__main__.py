@@ -5,10 +5,7 @@ import time
 import numpy as np
 from tqdm import tqdm
 
-from cellpose import core
-from cellpose import io
-from cellpose import models
-from cellpose import utils
+from cellpose import core, io, models, utils
 
 try:
     from cellpose.gui import gui
