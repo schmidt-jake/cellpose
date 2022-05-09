@@ -1,7 +1,7 @@
 from ij import IJ
-from ij.plugin.frame import RoiManager
 from ij.gui import PolygonRoi
 from ij.gui import Roi
+from ij.plugin.frame import RoiManager
 from java.awt import FileDialog
 
 fd = FileDialog(IJ.getInstance(), "Open", FileDialog.LOAD)
