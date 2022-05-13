@@ -291,8 +291,8 @@ class UnetModel():
         """ convert imgs to torch and run network model and return numpy """
         X = self._to_device(x)
         self.net.eval()
-        if self.mkldnn:
-            self.net = mkldnn_utils.to_mkldnn(self.net)
+        # if self.mkldnn:
+        #     self.net = mkldnn_utils.to_mkldnn(self.net)
         with torch.no_grad():
             y, style = self.net(X)
         del X

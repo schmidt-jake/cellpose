@@ -1,14 +1,20 @@
 
-import os, sys, time, shutil, tempfile, datetime, pathlib, subprocess
+import datetime
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
-from torch import optim
 import torch.nn.functional as F
-import datetime
+from torch import optim
 
-
-from . import transforms, io, dynamics, utils
+from . import dynamics, io, transforms, utils
 
 sz = 3
 
@@ -102,11 +108,11 @@ class batchconvstyle(nn.Module):
             else:
                 x = x + y
         feat = self.full(style)
-        if mkldnn:
-            x = x.to_dense()
-            y = (x + feat.unsqueeze(-1).unsqueeze(-1)).to_mkldnn()
-        else:
-            y = x + feat.unsqueeze(-1).unsqueeze(-1)
+        # if mkldnn:
+        #     x = x.to_dense()
+        #     y = (x + feat.unsqueeze(-1).unsqueeze(-1)).to_mkldnn()
+        # else:
+        y = x + feat.unsqueeze(-1).unsqueeze(-1)
         y = self.conv(y)
         return y
     
@@ -165,11 +171,11 @@ class upsample(nn.Module):
 
     def forward(self, style, xd, mkldnn=False):
         x = self.up[-1](xd[-1], xd[-1], style, mkldnn=mkldnn)
-        for n in range(len(self.up)-2,-1,-1):
-            if mkldnn:
-                x = self.upsampling(x.to_dense()).to_mkldnn()
-            else:
-                x = self.upsampling(x)
+        for n in range(len(self.up) - 2, -1, -1):
+            # if mkldnn:
+            #     x = self.upsampling(x.to_dense()).to_mkldnn()
+            # else:
+            x = self.upsampling(x)
             x = self.up[n](x, xd[n], style, mkldnn=mkldnn)
         return x
     
@@ -195,23 +201,24 @@ class CPnet(nn.Module):
         self.diam_mean = nn.Parameter(data=torch.ones(1) * diam_mean, requires_grad=False)
         self.diam_labels = nn.Parameter(data=torch.ones(1) * diam_mean, requires_grad=False)
         self.style_on = style_on
-        
-    def forward(self, data):
-        if self.mkldnn:
-            data = data.to_mkldnn()
-        T0    = self.downsample(data)
-        if self.mkldnn:
-            style = self.make_style(T0[-1].to_dense()) 
-        else:
-            style = self.make_style(T0[-1])
+
+    def forward(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        # data.shape = [4, 2, 224, 224]
+        # if self.mkldnn:
+        #     data = data.to_mkldnn()
+        T0 = self.downsample(data)
+        # if self.mkldnn:
+        #     style = self.make_style(T0[-1].to_dense())
+        # else:
+        style = self.make_style(T0[-1])
         style0 = style
         if not self.style_on:
             style = style * 0
         T0 = self.upsample(style, T0, self.mkldnn)
-        T0    = self.output(T0)
-        if self.mkldnn:
-            T0 = T0.to_dense()    
-            #T1 = T1.to_dense()    
+        T0 = self.output(T0)
+        # if self.mkldnn:
+        #     T0 = T0.to_dense()
+        #     # T1 = T1.to_dense()
         return T0, style0
 
     def save_model(self, filename):
