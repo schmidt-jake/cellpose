@@ -71,18 +71,37 @@ def resize_img(x: torch.Tensor, scale_factor: float) -> torch.Tensor:
 
 
 class SizeModel(torch.nn.Module):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        smean: torch.Tensor,
+        ymean: float,
+        A: torch.Tensor,
+        diam_mean: float = 30.0,
+    ) -> None:
         super().__init__()
+        self.diam_mean = diam_mean
+        self._log_diam_mean = torch.tensor(np.log(self.diam_mean))
+        self.smean = smean
+        self.ymean = ymean
+        self.A = A
+        self.five = torch.tensor(5.0)
 
-    def forward(self, masks: torch.Tensor) -> int:
+    def estimate_size(self, style: torch.Tensor):
+        szest = torch.exp(
+            self.A @ (style - self.smean).T + self._log_diam_mean + self.ymean
+        )
+        szest = torch.maximum(self.five, szest)
+        return szest
+
+    def compute_diam(self, masks: torch.Tensor) -> Number:
         # copied from cellpose.utils.diameters
-        _, counts = masks.int().unique(dim=1, return_counts=True)
-        counts = counts[:, 1:]
-        md = torch.median(counts.sqrt(), dim=1)
-        if torch.isnan(md):
-            md = 0
+        _, counts = torch.unique(masks.int(), return_counts=True)
+        counts = counts[1:]
+        md = counts.sqrt().median()
+        if md.isnan().any().item():
+            return 0.0
         md /= (torch.pi**0.5) / 2
-        return md
+        return md.item()
 
     @classmethod
     def make_size_model(
@@ -98,7 +117,6 @@ class SizeModel(torch.nn.Module):
             }
         )
 
-
 class Net(torch.nn.Module):
     def __init__(self, net: CPnet) -> None:
         super().__init__()
@@ -112,34 +130,10 @@ class Net(torch.nn.Module):
         # equivalent to UnetModel._run_net
         x, slc = pad_img(x)
         x = x.unsqueeze(0)
-        print(
-            "our imgs:",
-            x.shape,
-            x.dtype,
-            x.min().item(),
-            x.mean().item(),
-            x.max().item(),
-        )
         y, style = self.net(x)
-        print(
-            "our styles:",
-            style.shape,
-            style.dtype,
-            style.min().item(),
-            style.mean().item(),
-            style.max().item(),
-        )
         y = y.squeeze(0)
         style = style.squeeze(0)
         y = y[slc]
-        print(
-            "our styles:",
-            style.shape,
-            style.dtype,
-            style.min().item(),
-            style.mean().item(),
-            style.max().item(),
-        )
         if resample:
             y = resize_img(x=y, scale_factor=img.size(1) / y.size(1))
         y = y.permute(1, 2, 0)
@@ -168,35 +162,12 @@ class Model(torch.nn.Module):
         self, y: torch.Tensor, niter: int, resize: Optional[List[int]] = None
     ):
         cellprob = y[..., 2]
-        print(
-            "our cellprob:",
-            cellprob.shape,
-            cellprob.dtype,
-            cellprob.min().item(),
-            cellprob.mean().item(),
-            cellprob.max().item(),
-        )
         dP = y[..., :2].permute(2, 0, 1)
-        print(
-            "our dP:",
-            dP.shape,
-            dP.dtype,
-            dP.min().item(),
-            dP.mean().item(),
-            dP.max().item(),
-        )
         masks, flows = self._compute_mask(
             dP=dP.numpy(),
             cellprob=cellprob.numpy(),
             niter=niter,
             resize=resize,
-        )
-        print(
-            "our masks:",
-            masks.shape,
-            masks.dtype,
-            masks.min().item(),
-            masks.max().item(),
         )
         return masks, flows
 
@@ -207,30 +178,17 @@ class Model(torch.nn.Module):
 
         scale_factor = (self.size_model.diam_mean / diam_style).item()
 
-        print("rescale", scale_factor)
-
         # equivalent to SizeModel getting masks
-        print("COMPUTING STYLE FOR DIAMETER......................")
         y, style = self.net(img, resample=False, scale_factor=scale_factor)
-        print(
-            "our styles:",
-            style.shape,
-            style.dtype,
-            style.min().item(),
-            style.mean().item(),
-            style.max().item(),
-        )
         masks, flows = self.compute_masks(
             y=y, niter=int(1 / scale_factor * 200), resize=[img.size(1)] * 2
         )
         diam = self.size_model.compute_diam(masks)
-        print("END......................")
         return diam
 
     def forward(self, img: torch.Tensor):
         img = img[:, :, [2, 0]]
         diam = self.compute_diam(img)
-        print("my diam", diam)
         scale_factor = self.size_model.diam_mean / diam
         y, style = self.net(img, resample=True, scale_factor=scale_factor)
         masks, flows = self.compute_masks(y=y, niter=int(1 / scale_factor * 200))
