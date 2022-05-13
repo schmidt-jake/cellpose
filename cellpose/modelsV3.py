@@ -8,9 +8,7 @@ from torch.types import Number
 from torchvision.transforms.functional import resize
 
 from cellpose.dynamics import compute_masks
-from cellpose.modelsV2 import SizeModel
-from cellpose.plot import dx_to_circ
-from cellpose.plot import show_segmentation
+from cellpose.plot import dx_to_circ, show_segmentation
 from cellpose.resnet_torch import CPnet
 from cellpose.utils import diameters
 
@@ -70,6 +68,21 @@ def resize_img(x: torch.Tensor, scale_factor: float) -> torch.Tensor:
     new_size = int(x.size(1) * scale_factor)
     x = resize(img=x, size=[new_size] * 2)
     return x
+
+
+class SizeModel(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, masks: torch.Tensor) -> int:
+        # copied from cellpose.utils.diameters
+        _, counts = masks.int().unique(dim=1, return_counts=True)
+        counts = counts[:, 1:]
+        md = torch.median(counts.sqrt(), dim=1)
+        if torch.isnan(md):
+            md = 0
+        md /= (torch.pi**0.5) / 2
+        return md
 
 
 class Net(torch.nn.Module):
