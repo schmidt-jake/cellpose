@@ -10,7 +10,6 @@ from torchvision.transforms.functional import resize
 from cellpose.dynamics import compute_masks
 from cellpose.plot import dx_to_circ, show_segmentation
 from cellpose.resnet_torch import CPnet
-from cellpose.utils import diameters
 
 
 def normalize_img(x: torch.Tensor) -> torch.Tensor:
@@ -86,6 +85,7 @@ class SizeModel(torch.nn.Module):
         self.A = A
         self.five = torch.tensor(5.0)
 
+    @torch.jit.export
     def estimate_size(self, style: torch.Tensor):
         szest = torch.exp(
             self.A @ (style - self.smean).T + self._log_diam_mean + self.ymean
@@ -93,7 +93,7 @@ class SizeModel(torch.nn.Module):
         szest = torch.maximum(self.five, szest)
         return szest
 
-    def compute_diam(self, masks: torch.Tensor) -> Number:
+    def forward(self, masks: torch.Tensor) -> Number:
         # copied from cellpose.utils.diameters
         _, counts = torch.unique(masks.int(), return_counts=True)
         counts = counts[1:]
@@ -116,6 +116,7 @@ class SizeModel(torch.nn.Module):
                 for k, v in params.items()
             }
         )
+
 
 class Net(torch.nn.Module):
     def __init__(self, net: CPnet) -> None:
@@ -183,7 +184,7 @@ class Model(torch.nn.Module):
         masks, flows = self.compute_masks(
             y=y, niter=int(1 / scale_factor * 200), resize=[img.size(1)] * 2
         )
-        diam = self.size_model.compute_diam(masks)
+        diam = self.size_model(masks)
         return diam
 
     def forward(self, img: torch.Tensor):
