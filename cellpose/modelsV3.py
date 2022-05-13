@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -83,6 +83,20 @@ class SizeModel(torch.nn.Module):
             md = 0
         md /= (torch.pi**0.5) / 2
         return md
+
+    @classmethod
+    def make_size_model(
+        cls: Type["SizeModel"], pretrained_filepath: str
+    ) -> "SizeModel":
+        params: Dict[str, Any] = np.load(pretrained_filepath, allow_pickle=True).item()
+        return cls(
+            **{
+                k: torch.from_numpy(v).float()
+                if isinstance(v, np.ndarray)
+                else float(v)
+                for k, v in params.items()
+            }
+        )
 
 
 class Net(torch.nn.Module):
