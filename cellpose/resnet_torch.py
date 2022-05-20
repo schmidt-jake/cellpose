@@ -216,17 +216,15 @@ class upsample(torch.nn.Module):
     ) -> None:
         super().__init__()
         self.upsampling = torch.nn.Upsample(scale_factor=2, mode="nearest")
-        self.up = torch.nn.Sequential()
+        self.up = torch.nn.ModuleList()
         for n in range(1, len(nbase)):
             if residual_on:
-                self.up.add_module(
-                    "res_up_%d" % (n - 1),
-                    resup(nbase[n], nbase[n - 1], nbase[-1], sz, concatenation),
+                self.up.append(
+                    resup(nbase[n], nbase[n - 1], nbase[-1], sz, concatenation)
                 )
             else:
-                self.up.add_module(
-                    "conv_up_%d" % (n - 1),
-                    convup(nbase[n], nbase[n - 1], nbase[-1], sz, concatenation),
+                self.up.append(
+                    convup(nbase[n], nbase[n - 1], nbase[-1], sz, concatenation)
                 )
 
     def forward(self, style: torch.Tensor, xd: List[torch.Tensor]) -> torch.Tensor:
