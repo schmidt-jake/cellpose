@@ -334,3 +334,10 @@ class CPnet(nn.Module):
         self.load_state_dict(
             dict([(name, param) for name, param in state_dict.items()]), strict=False
         )
+
+
+if __name__ == "__main__":
+    net = CPnet(nbase=[2, 32, 64, 128, 256], nout=3, sz=3, concatenation=True)
+    net.eval()
+    with torch.inference_mode():
+        net(torch.rand(size=(1, 2, 256, 256)))
