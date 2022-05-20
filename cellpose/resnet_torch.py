@@ -228,10 +228,10 @@ class upsample(torch.nn.Module):
                 )
 
     def forward(self, style: torch.Tensor, xd: List[torch.Tensor]) -> torch.Tensor:
-        x = self.up[-1](xd[-1], xd[-1], style)
+        x = self.up[-1](x=xd[-1], y=xd[-1], style=style)
         for n in range(len(self.up) - 2, -1, -1):
             x = self.upsampling(x)
-            x = self.up[n](x, xd[n], style)
+            x = self.up[n](x=x, y=xd[n], style=style)
         return x
 
 
