@@ -126,24 +126,16 @@ class resup(torch.nn.Module):
         concatenation: bool = False,
     ) -> None:
         super().__init__()
-        self.conv = torch.nn.Sequential()
-        self.conv.add_module("conv_0", batchconv(in_channels, out_channels, sz))
-        self.conv.add_module(
-            "conv_1",
-            batchconvstyle(
-                out_channels,
-                out_channels,
-                style_channels,
-                sz,
-                concatenation=concatenation,
-            ),
+        self.conv0 = batchconv(in_channels, out_channels, sz)
+        self.conv1 = batchconvstyle(
+            out_channels,
+            out_channels,
+            style_channels,
+            sz,
+            concatenation=concatenation,
         )
-        self.conv.add_module(
-            "conv_2", batchconvstyle(out_channels, out_channels, style_channels, sz)
-        )
-        self.conv.add_module(
-            "conv_3", batchconvstyle(out_channels, out_channels, style_channels, sz)
-        )
+        self.conv2 = batchconvstyle(out_channels, out_channels, style_channels, sz)
+        self.conv3 = batchconvstyle(out_channels, out_channels, style_channels, sz)
         self.proj = batchconv0(in_channels, out_channels, 1)
 
     def forward(
@@ -152,8 +144,8 @@ class resup(torch.nn.Module):
         y: torch.Tensor,
         style: torch.Tensor,
     ) -> torch.Tensor:
-        x = self.proj(x) + self.conv[1](style=style, x=self.conv[0](x), y=y)
-        x = x + self.conv[3](style=style, x=self.conv[2](style=style, x=x))
+        x = self.proj(x) + self.conv1(style=style, x=self.conv0(x), y=y)
+        x = x + self.conv3(style=style, x=self.conv2(style=style, x=x))
         return x
 
 
@@ -168,16 +160,13 @@ class convup(torch.nn.Module):
     ):
         super().__init__()
         self.conv = torch.nn.Sequential()
-        self.conv.add_module("conv_0", batchconv(in_channels, out_channels, sz))
-        self.conv.add_module(
-            "conv_1",
-            batchconvstyle(
-                out_channels,
-                out_channels,
-                style_channels,
-                sz,
-                concatenation=concatenation,
-            ),
+        self.conv0 = batchconv(in_channels, out_channels, sz)
+        self.conv1 = batchconvstyle(
+            out_channels,
+            out_channels,
+            style_channels,
+            sz,
+            concatenation=concatenation,
         )
 
     def forward(
@@ -186,7 +175,7 @@ class convup(torch.nn.Module):
         y: torch.Tensor,
         style: torch.Tensor,
     ) -> torch.Tensor:
-        x = self.conv[1](style, self.conv[0](x), y=y)
+        x = self.conv1(style=style, x=self.conv0(x), y=y)
         return x
 
 
@@ -311,4 +300,11 @@ if __name__ == "__main__":
     net = CPnet(nbase=[2, 32, 64, 128, 256], nout=3, sz=3, concatenation=True)
     net.eval()
     with torch.inference_mode():
-        net(torch.rand(size=(1, 2, 256, 256)))
+        x = torch.rand(size=(1, 2, 256, 256))
+        script = torch.jit.script(
+            net,
+            example_inputs=[
+                (x,),
+            ],
+        )
+        script(x)
