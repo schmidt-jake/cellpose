@@ -1,41 +1,36 @@
 from typing import List, Optional, Tuple, Union
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.modules.container import Sequential
-from torch.nn.parameter import Parameter
-
-sz = 3
 
 
-def convbatchrelu(in_channels, out_channels, sz):
-    return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, sz, padding=sz // 2),
-        nn.BatchNorm2d(out_channels, eps=1e-5),
-        nn.ReLU(inplace=True),
+def convbatchrelu(in_channels, out_channels, sz) -> torch.nn.Sequential:
+    return torch.nn.Sequential(
+        torch.nn.Conv2d(in_channels, out_channels, sz, padding=sz // 2),
+        torch.nn.BatchNorm2d(out_channels, eps=1e-5),
+        torch.nn.ReLU(inplace=True),
     )
 
 
-def batchconv(in_channels: int, out_channels: int, sz: int) -> Sequential:
-    return nn.Sequential(
-        nn.BatchNorm2d(in_channels, eps=1e-5),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(in_channels, out_channels, sz, padding=sz // 2),
+def batchconv(in_channels: int, out_channels: int, sz: int) -> torch.nn.Sequential:
+    return torch.nn.Sequential(
+        torch.nn.BatchNorm2d(in_channels, eps=1e-5),
+        torch.nn.ReLU(inplace=True),
+        torch.nn.Conv2d(in_channels, out_channels, sz, padding=sz // 2),
     )
 
 
-def batchconv0(in_channels: int, out_channels: int, sz: int) -> Sequential:
-    return nn.Sequential(
-        nn.BatchNorm2d(in_channels, eps=1e-5),
-        nn.Conv2d(in_channels, out_channels, sz, padding=sz // 2),
+def batchconv0(in_channels: int, out_channels: int, sz: int) -> torch.nn.Sequential:
+    return torch.nn.Sequential(
+        torch.nn.BatchNorm2d(in_channels, eps=1e-5),
+        torch.nn.Conv2d(in_channels, out_channels, sz, padding=sz // 2),
     )
 
 
-class resdown(nn.Module):
+class resdown(torch.nn.Module):
     def __init__(self, in_channels: int, out_channels: int, sz: int) -> None:
         super().__init__()
-        self.conv = nn.Sequential()
+        self.conv = torch.nn.Sequential()
         self.proj = batchconv0(in_channels, out_channels, 1)
         for t in range(4):
             if t == 0:
@@ -54,10 +49,10 @@ class resdown(nn.Module):
         return x
 
 
-class convdown(nn.Module):
-    def __init__(self, in_channels, out_channels, sz):
+class convdown(torch.nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, sz: int) -> None:
         super().__init__()
-        self.conv = nn.Sequential()
+        self.conv = torch.nn.Sequential()
         for t in range(2):
             if t == 0:
                 self.conv.add_module(
@@ -74,11 +69,11 @@ class convdown(nn.Module):
         return x
 
 
-class downsample(nn.Module):
+class downsample(torch.nn.Module):
     def __init__(self, nbase: List[int], sz: int, residual_on: bool = True) -> None:
         super().__init__()
-        self.down = nn.Sequential()
-        self.maxpool = nn.MaxPool2d(2, 2)
+        self.down = torch.nn.Sequential()
+        self.maxpool = torch.nn.MaxPool2d(2, 2)
         for n in range(len(nbase) - 1):
             if residual_on:
                 self.down.add_module(
@@ -90,7 +85,7 @@ class downsample(nn.Module):
                 )
 
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
-        xd = []
+        xd: List[torch.Tensor] = []
         for n in range(len(self.down)):
             if n > 0:
                 y = self.maxpool(xd[n - 1])
@@ -100,7 +95,7 @@ class downsample(nn.Module):
         return xd
 
 
-class batchconvstyle(nn.Module):
+class batchconvstyle(torch.nn.Module):
     def __init__(
         self,
         in_channels: int,
@@ -113,10 +108,10 @@ class batchconvstyle(nn.Module):
         self.concatenation = concatenation
         if concatenation:
             self.conv = batchconv(in_channels * 2, out_channels, sz)
-            self.full = nn.Linear(style_channels, out_channels * 2)
+            self.full = torch.nn.Linear(style_channels, out_channels * 2)
         else:
             self.conv = batchconv(in_channels, out_channels, sz)
-            self.full = nn.Linear(style_channels, out_channels)
+            self.full = torch.nn.Linear(style_channels, out_channels)
 
     def forward(
         self,
@@ -140,7 +135,7 @@ class batchconvstyle(nn.Module):
         return y
 
 
-class resup(nn.Module):
+class resup(torch.nn.Module):
     def __init__(
         self,
         in_channels: int,
@@ -150,7 +145,7 @@ class resup(nn.Module):
         concatenation: bool = False,
     ) -> None:
         super().__init__()
-        self.conv = nn.Sequential()
+        self.conv = torch.nn.Sequential()
         self.conv.add_module("conv_0", batchconv(in_channels, out_channels, sz))
         self.conv.add_module(
             "conv_1",
@@ -184,12 +179,17 @@ class resup(nn.Module):
         return x
 
 
-class convup(nn.Module):
+class convup(torch.nn.Module):
     def __init__(
-        self, in_channels, out_channels, style_channels, sz, concatenation=False
+        self,
+        in_channels: int,
+        out_channels: int,
+        style_channels: int,
+        sz: int,
+        concatenation: bool = False,
     ):
         super().__init__()
-        self.conv = nn.Sequential()
+        self.conv = torch.nn.Sequential()
         self.conv.add_module("conv_0", batchconv(in_channels, out_channels, sz))
         self.conv.add_module(
             "conv_1",
@@ -202,27 +202,33 @@ class convup(nn.Module):
             ),
         )
 
-    def forward(self, x, y, style, mkldnn=False):
+    def forward(
+        self,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        style: torch.Tensor,
+    ) -> torch.Tensor:
         x = self.conv[1](style, self.conv[0](x), y=y)
         return x
 
 
-class make_style(nn.Module):
+class make_style(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        # self.pool_all = nn.AvgPool2d(28)
-        self.flatten = nn.Flatten()
+        # self.pool_all = torch.nn.AvgPool2d(28)
+        self.flatten = torch.nn.Flatten()
 
     def forward(self, x0: torch.Tensor) -> torch.Tensor:
         # style = self.pool_all(x0)
         style = F.avg_pool2d(x0, kernel_size=(x0.shape[-2], x0.shape[-1]))
-        style = self.flatten(style)
-        style = style / torch.sum(style**2, axis=1, keepdim=True) ** 0.5
+        style: torch.Tensor = self.flatten(style)  # type: ignore[no-redef]
+        style /= style.square().sum(dim=1, keepdim=True).sqrt()
+        # style = style / torch.sum(style**2, axis=1, keepdim=True) ** 0.5
 
         return style
 
 
-class upsample(nn.Module):
+class upsample(torch.nn.Module):
     def __init__(
         self,
         nbase: List[int],
@@ -231,8 +237,8 @@ class upsample(nn.Module):
         concatenation: bool = False,
     ) -> None:
         super().__init__()
-        self.upsampling = nn.Upsample(scale_factor=2, mode="nearest")
-        self.up = nn.Sequential()
+        self.upsampling = torch.nn.Upsample(scale_factor=2, mode="nearest")
+        self.up = torch.nn.Sequential()
         for n in range(1, len(nbase)):
             if residual_on:
                 self.up.add_module(
@@ -245,20 +251,15 @@ class upsample(nn.Module):
                     convup(nbase[n], nbase[n - 1], nbase[-1], sz, concatenation),
                 )
 
-    def forward(
-        self, style: torch.Tensor, xd: List[torch.Tensor], mkldnn: bool = False
-    ) -> torch.Tensor:
-        x = self.up[-1](xd[-1], xd[-1], style, mkldnn=mkldnn)
+    def forward(self, style: torch.Tensor, xd: List[torch.Tensor]) -> torch.Tensor:
+        x = self.up[-1](xd[-1], xd[-1], style)
         for n in range(len(self.up) - 2, -1, -1):
-            if mkldnn:
-                x = self.upsampling(x.to_dense()).to_mkldnn()
-            else:
-                x = self.upsampling(x)
-            x = self.up[n](x, xd[n], style, mkldnn=mkldnn)
+            x = self.upsampling(x)
+            x = self.up[n](x, xd[n], style)
         return x
 
 
-class CPnet(nn.Module):
+class CPnet(torch.nn.Module):
     def __init__(
         self,
         nbase: List[int],
@@ -267,8 +268,7 @@ class CPnet(nn.Module):
         residual_on: bool = True,
         style_on: bool = True,
         concatenation: bool = False,
-        mkldnn: bool = False,
-        diam_mean: Union[float, Parameter] = 30.0,
+        diam_mean: Union[float, torch.nn.Parameter] = 30.0,
     ) -> None:
         super().__init__()
         self.nbase = nbase
@@ -277,7 +277,6 @@ class CPnet(nn.Module):
         self.residual_on = residual_on
         self.style_on = style_on
         self.concatenation = concatenation
-        self.mkldnn = mkldnn if mkldnn is not None else False
         self.downsample = downsample(nbase, sz, residual_on=residual_on)
         nbaseup = nbase[1:]
         nbaseup.append(nbaseup[-1])
@@ -286,34 +285,26 @@ class CPnet(nn.Module):
         )
         self.make_style = make_style()
         self.output = batchconv(nbaseup[0], nout, 1)
-        self.diam_mean = nn.Parameter(
+        self.diam_mean = torch.nn.Parameter(
             data=torch.ones(1) * diam_mean, requires_grad=False
         )
-        self.diam_labels = nn.Parameter(
+        self.diam_labels = torch.nn.Parameter(
             data=torch.ones(1) * diam_mean, requires_grad=False
         )
         self.style_on = style_on
 
     def forward(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         # data.shape = [4, 2, 224, 224]
-        if self.mkldnn:
-            data = data.to_mkldnn()
         T0 = self.downsample(data)
-        if self.mkldnn:
-            style = self.make_style(T0[-1].to_dense())
-        else:
-            style = self.make_style(T0[-1])
+        style = self.make_style(T0[-1])
         style0 = style
         if not self.style_on:
             style = style * 0
-        T0 = self.upsample(style, T0, self.mkldnn)
+        T0 = self.upsample(style, T0)
         T0 = self.output(T0)
-        if self.mkldnn:
-            T0 = T0.to_dense()
-            # T1 = T1.to_dense()
         return T0, style0
 
-    def save_model(self, filename):
+    def save_model(self, filename: str) -> None:
         torch.save(self.state_dict(), filename)
 
     def load_model(self, filename: str, cpu: bool = False) -> None:
