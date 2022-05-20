@@ -228,10 +228,14 @@ class upsample(torch.nn.Module):
                 )
 
     def forward(self, style: torch.Tensor, xd: List[torch.Tensor]) -> torch.Tensor:
+        # FIXME: make this dynamic
         x = self.up[-1](x=xd[-1], y=xd[-1], style=style)
-        for n in range(len(self.up) - 2, -1, -1):
-            x = self.upsampling(x)
-            x = self.up[n](x=x, y=xd[n], style=style)
+        x = self.upsampling(x)
+        x = self.up[2](x=x, y=xd[2], style=style)
+        x = self.upsampling(x)
+        x = self.up[1](x=x, y=xd[1], style=style)
+        x = self.upsampling(x)
+        x = self.up[0](x=x, y=xd[0], style=style)
         return x
 
 
