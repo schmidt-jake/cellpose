@@ -27,7 +27,7 @@ def batchconv0(in_channels: int, out_channels: int, sz: int) -> torch.nn.Sequent
     )
 
 
-class resdown(torch.nn.Module):
+class resdown(torch.jit.ScriptModule):
     def __init__(self, in_channels: int, out_channels: int, sz: int) -> None:
         super().__init__()
         self.proj = batchconv0(in_channels, out_channels, 1)
@@ -40,6 +40,7 @@ class resdown(torch.nn.Module):
             ]
         )
 
+    @torch.jit.script_method
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x.shape = (4, 2, 224, 224)
         x = self.proj(x) + self.conv[1](self.conv[0](x))
@@ -47,19 +48,20 @@ class resdown(torch.nn.Module):
         return x
 
 
-class convdown(torch.nn.Module):
+class convdown(torch.jit.ScriptModule):
     def __init__(self, in_channels: int, out_channels: int, sz: int) -> None:
         super().__init__()
         self.conv0 = batchconv(in_channels, out_channels, sz)
         self.conv1 = batchconv(out_channels, out_channels, sz)
 
+    @torch.jit.script_method
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv0(x)
         x = self.conv1(x)
         return x
 
 
-class downsample(torch.nn.Module):
+class downsample(torch.jit.ScriptModule):
     def __init__(self, nbase: List[int], sz: int, residual_on: bool = True) -> None:
         super().__init__()
         self.down = torch.nn.ModuleList()
@@ -70,6 +72,7 @@ class downsample(torch.nn.Module):
             else:
                 self.down.append(convdown(nbase[n], nbase[n + 1], sz))
 
+    @torch.jit.script_method
     def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
         xd: List[torch.Tensor] = []
         for n, down in enumerate(self.down):
@@ -81,7 +84,7 @@ class downsample(torch.nn.Module):
         return xd
 
 
-class batchconvstyle(torch.nn.Module):
+class batchconvstyle(torch.jit.ScriptModule):
     def __init__(
         self,
         in_channels: int,
@@ -99,6 +102,7 @@ class batchconvstyle(torch.nn.Module):
             self.conv = batchconv(in_channels, out_channels, sz)
             self.full = torch.nn.Linear(style_channels, out_channels)
 
+    @torch.jit.script_method
     def forward(
         self,
         style: torch.Tensor,
@@ -116,7 +120,7 @@ class batchconvstyle(torch.nn.Module):
         return y
 
 
-class resup(torch.nn.Module):
+class resup(torch.jit.ScriptModule):
     def __init__(
         self,
         in_channels: int,
@@ -138,6 +142,7 @@ class resup(torch.nn.Module):
         self.conv3 = batchconvstyle(out_channels, out_channels, style_channels, sz)
         self.proj = batchconv0(in_channels, out_channels, 1)
 
+    @torch.jit.script_method
     def forward(
         self,
         x: torch.Tensor,
@@ -149,7 +154,7 @@ class resup(torch.nn.Module):
         return x
 
 
-class convup(torch.nn.Module):
+class convup(torch.jit.ScriptModule):
     def __init__(
         self,
         in_channels: int,
@@ -169,6 +174,7 @@ class convup(torch.nn.Module):
             concatenation=concatenation,
         )
 
+    @torch.jit.script_method
     def forward(
         self,
         x: torch.Tensor,
@@ -179,12 +185,13 @@ class convup(torch.nn.Module):
         return x
 
 
-class make_style(torch.nn.Module):
+class make_style(torch.jit.ScriptModule):
     def __init__(self) -> None:
         super().__init__()
         # self.pool_all = torch.nn.AvgPool2d(28)
         self.flatten = torch.nn.Flatten()
 
+    @torch.jit.script_method
     def forward(self, x0: torch.Tensor) -> torch.Tensor:
         # style = self.pool_all(x0)
         style = F.avg_pool2d(x0, kernel_size=(x0.shape[-2], x0.shape[-1]))
@@ -195,7 +202,7 @@ class make_style(torch.nn.Module):
         return style
 
 
-class upsample(torch.nn.Module):
+class upsample(torch.jit.ScriptModule):
     def __init__(
         self,
         nbase: List[int],
@@ -216,6 +223,7 @@ class upsample(torch.nn.Module):
                     convup(nbase[n], nbase[n - 1], nbase[-1], sz, concatenation)
                 )
 
+    @torch.jit.script_method
     def forward(self, style: torch.Tensor, xd: List[torch.Tensor]) -> torch.Tensor:
         # FIXME: make this dynamic
         x = self.up[-1](x=xd[-1], y=xd[-1], style=style)
@@ -228,7 +236,7 @@ class upsample(torch.nn.Module):
         return x
 
 
-class CPnet(torch.nn.Module):
+class CPnet(torch.jit.ScriptModule):
     def __init__(
         self,
         nbase: List[int],
@@ -238,6 +246,7 @@ class CPnet(torch.nn.Module):
         style_on: bool = True,
         concatenation: bool = False,
         diam_mean: Union[float, torch.nn.Parameter] = 30.0,
+        **kwargs,
     ) -> None:
         super().__init__()
         self.nbase = nbase
@@ -262,8 +271,8 @@ class CPnet(torch.nn.Module):
         )
         self.style_on = style_on
 
+    @torch.jit.script_method
     def forward(self, data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        # data.shape = [4, 2, 224, 224]
         T0 = self.downsample(data)
         style = self.make_style(T0[-1])
         style0 = style
@@ -287,7 +296,6 @@ class CPnet(torch.nn.Module):
                 self.residual_on,
                 self.style_on,
                 self.concatenation,
-                self.mkldnn,
                 self.diam_mean,
             )
             state_dict = torch.load(filename, map_location=torch.device("cpu"))
@@ -297,14 +305,21 @@ class CPnet(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    net = CPnet(nbase=[2, 32, 64, 128, 256], nout=3, sz=3, concatenation=True)
-    net.eval()
-    with torch.inference_mode():
-        x = torch.rand(size=(1, 2, 256, 256))
-        script = torch.jit.script(
-            net,
-            example_inputs=[
-                (x,),
-            ],
-        )
-        script(x)
+    from pathlib import Path
+
+    net = CPnet(
+        nbase=[2, 32, 64, 128, 256],
+        nout=3,
+        sz=3,
+        residual_on=True,
+        style_on=True,
+        concatenation=False,
+        diam_mean=30.0,
+    )
+    state_dict = torch.load(
+        Path.home().joinpath(".cellpose/models/cyto2torch_0"),
+        map_location=torch.device("cpu"),
+    )
+    net.load_state_dict(state_dict, strict=False)
+    frozen = torch.jit.freeze(net.eval())
+    frozen.save("frozen_resnet.torchscript")
