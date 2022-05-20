@@ -2,6 +2,7 @@ from typing import Tuple
 
 import numpy.typing as npt
 import torch
+
 from cellpose import modelsV2
 from cellpose.io import imread
 from cellpose.models import Cellpose
@@ -70,8 +71,8 @@ def test_model() -> None:
         x=img,
         channels=[3, 1],
         channel_axis=2,
-        diameter=30.0,
+        diameter=None,
         net_avg=False,
         tile=False,
-        resample=False,
+        resample=True,
     )
